@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.xyyh.oidc.client.ClientDetailsService;
 import org.xyyh.oidc.client.InMemoryClientDetailsService;
 import org.xyyh.oidc.core.*;
@@ -38,23 +39,20 @@ public class AuthorizationServerConfiguration {
             clientDetailsService,
             oAuth2RequestValidator,
             userApprovalHandler,
-            authorizationCodeService,
-            tokenServices,
-            accessTokenConverter);
+            authorizationCodeService
+        );
     }
 
     @Bean
     public TokenEndpoint tokenEndpoint(OAuth2AuthorizationCodeStore authorizationCodeService,
                                        PkceValidator pkceValidator,
                                        OAuth2AuthorizationServerTokenService tokenService,
-                                       OAuth2RequestScopeValidator requestScopeValidator,
                                        AccessTokenConverter accessTokenConverter,
                                        IdTokenGenerator idTokenGenerator) throws JOSEException {
         return new TokenEndpoint(
             authorizationCodeService,
             tokenService,
             accessTokenConverter,
-            requestScopeValidator,
             pkceValidator,
             idTokenGenerator,
             jwkSet()
@@ -98,22 +96,11 @@ public class AuthorizationServerConfiguration {
         return new InMemoryAuthorizationCodeStore();
     }
 
-    @Bean
-    @ConditionalOnMissingBean(OAuth2RedirectUriValidator.class)
-    public OAuth2RedirectUriValidator oAuth2RedirectUriValidator() {
-        return new DefaultOAuth2RedirectUriValidator();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(OAuth2RequestScopeValidator.class)
-    public OAuth2RequestScopeValidator requestScopeValidator() {
-        return new DefaultOAuth2RequestScopeValidator();
-    }
 
     @Bean
     @ConditionalOnMissingBean(OAuth2AuthorizationRequestValidator.class)
-    public OAuth2AuthorizationRequestValidator oAuth2RequestValidator(OAuth2RedirectUriValidator redirectUriValidator, OAuth2RequestScopeValidator requestScopeValidator) {
-        return new DefaultOAuth2AuthorizationRequestValidator(redirectUriValidator, requestScopeValidator);
+    public OAuth2AuthorizationRequestValidator oAuth2RequestValidator() {
+        return new DefaultOAuth2AuthorizationRequestValidator();
     }
 
 

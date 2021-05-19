@@ -1,13 +1,13 @@
 package org.xyyh.oidc.exception;
 
-public class UnsupportedResponseTypeException extends Exception {
-    private static final long serialVersionUID = -496818695443849954L;
+import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 
-    public UnsupportedResponseTypeException() {
-        super();
+public class UnsupportedResponseTypeException extends InvalidRequestParameterException {
+    public UnsupportedResponseTypeException(OidcAuthorizationRequest request) {
+        super(request, "unsupported_response_type");
     }
 
-    public UnsupportedResponseTypeException(String message) {
-        super(message);
+    public UnsupportedResponseTypeException(OidcAuthorizationRequest request, String message, Throwable ex) {
+        super(request, message, ex);
     }
 }

@@ -2,7 +2,7 @@ package org.xyyh.oidc.provider;
 
 import org.xyyh.oidc.core.ApprovalResult;
 import org.xyyh.oidc.core.ApprovalResultStore;
-import org.xyyh.oidc.endpoint.request.OpenidAuthorizationRequest;
+import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import java.time.ZonedDateTime;
@@ -27,7 +27,7 @@ public class ApprovalStoreUserApprovalHandler extends DefaultUserApprovalHandler
      * @return 预检测结果
      */
     @Override
-    public ApprovalResult preCheck(OpenidAuthorizationRequest request, OidcUserDetails user) {
+    public ApprovalResult preCheck(OidcAuthorizationRequest request, OidcUserDetails user) {
         // 保存的scope大于请求的scope时，返回之前的授权信息
         final Set<String> requestScopes = request.getScopes();
         final String requestRedirectUri = request.getRedirectUri();
@@ -53,7 +53,7 @@ public class ApprovalStoreUserApprovalHandler extends DefaultUserApprovalHandler
      * @param user   用户信息
      */
     @Override
-    public void updateAfterApproval(OpenidAuthorizationRequest request, OidcUserDetails user, ApprovalResult result) {
+    public void updateAfterApproval(OidcAuthorizationRequest request, OidcUserDetails user, ApprovalResult result) {
         this.approvalStoreService.save(user.getUsername(), request.getClientId(), result);
     }
 }

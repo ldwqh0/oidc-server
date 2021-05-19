@@ -6,7 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.xyyh.oidc.client.ClientDetails;
-import org.xyyh.oidc.endpoint.request.OpenidAuthorizationRequest;
+import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import javax.validation.constraints.NotNull;
@@ -34,18 +34,18 @@ public interface OidcAuthentication extends Authentication, CredentialsContainer
     Set<String> getScopes();
 
     /**
-     * the {@link  OpenidAuthorizationRequest}
+     * the {@link  OidcAuthorizationRequest}
      *
-     * @see OpenidAuthorizationRequest
+     * @see OidcAuthorizationRequest
      */
-    OpenidAuthorizationRequest getRequest();
+    OidcAuthorizationRequest getRequest();
 
     static OidcAuthentication of(ApprovalResult approvalResult, ClientDetails client, OidcUserDetails user) {
         return new DefaultOidcAuthenticationToken(null, approvalResult, client, user);
     }
 
 
-    static OidcAuthentication of(OpenidAuthorizationRequest request,
+    static OidcAuthentication of(OidcAuthorizationRequest request,
                                  ApprovalResult result,
                                  ClientDetails client,
                                  OidcUserDetails user) {
@@ -68,7 +68,7 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
 
     private final OidcUserDetails user;
 
-    private final OpenidAuthorizationRequest request;
+    private final OidcAuthorizationRequest request;
 
     @Override
     public boolean isAuthenticated() {
@@ -89,7 +89,7 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
      * @param client  client信息
      * @param user    用户信息
      */
-    public DefaultOidcAuthenticationToken(OpenidAuthorizationRequest request,
+    public DefaultOidcAuthenticationToken(OidcAuthorizationRequest request,
                                           ApprovalResult result,
                                           @NotNull ClientDetails client,
                                           OidcUserDetails user) {
@@ -152,7 +152,7 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
     }
 
     @Override
-    public OpenidAuthorizationRequest getRequest() {
+    public OidcAuthorizationRequest getRequest() {
         return this.request;
     }
 

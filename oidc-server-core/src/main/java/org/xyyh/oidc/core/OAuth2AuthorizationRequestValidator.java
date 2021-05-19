@@ -1,11 +1,9 @@
 package org.xyyh.oidc.core;
 
 import org.xyyh.oidc.client.ClientDetails;
-import org.xyyh.oidc.endpoint.request.OpenidAuthorizationRequest;
-import org.xyyh.oidc.exception.InvalidScopeException;
-import org.xyyh.oidc.exception.OpenidRequestValidationException;
-import org.xyyh.oidc.exception.UnRegisteredRedirectUriException;
-import org.xyyh.oidc.exception.UnsupportedResponseTypeException;
+import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
+import org.xyyh.oidc.exception.InvalidRedirectUriException;
+import org.xyyh.oidc.exception.InvalidRequestParameterException;
 
 /**
  * OAuth2请求验证器，用户验证请求的正确性
@@ -20,6 +18,6 @@ public interface OAuth2AuthorizationRequestValidator {
      * @param request 用户授权请求
      * @param client  连接程序
      */
-    void validate(OpenidAuthorizationRequest request, ClientDetails client) throws InvalidScopeException, UnsupportedResponseTypeException, OpenidRequestValidationException, UnRegisteredRedirectUriException;
+    void validate(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRedirectUriException, InvalidRequestParameterException;
 
 }
