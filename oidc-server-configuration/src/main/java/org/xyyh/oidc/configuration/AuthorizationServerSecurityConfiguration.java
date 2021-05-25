@@ -10,7 +10,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.xyyh.oidc.client.ClientDetailsService;
-import org.xyyh.oidc.provider.ClientDetailsUserDetailsService;
 
 @Order(99)
 @EnableWebSecurity
@@ -24,9 +23,15 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.requestMatchers().antMatchers("/oauth2/token", "/oauth2/certs", "/oauth2/token/introspection");
+        http.requestMatchers().antMatchers(
+            "/oauth2/token",
+            "/oauth2/certs",
+            "/oauth2/token/introspection",
+            "/oauth2/.well-known/openid-configuration");
         http.authorizeRequests()
-            .antMatchers("/oauth2/certs").permitAll()
+            .antMatchers("/oauth2/certs",
+                "/oauth2/.well-known/openid-configuration")
+            .permitAll()
             .anyRequest().fullyAuthenticated();
         // 根据rfc6749,如果客户端验证未通过，应用返回401和WWW-Authenticate header
         http.formLogin().disable().httpBasic();
@@ -39,7 +44,7 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(new ClientDetailsUserDetailsService(clientDetailsService))
+        auth.userDetailsService(clientDetailsService::loadClientByClientId)
             .passwordEncoder(passwordEncoder());
     }
 

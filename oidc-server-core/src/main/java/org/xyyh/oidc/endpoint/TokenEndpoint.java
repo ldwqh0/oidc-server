@@ -1,14 +1,13 @@
 package org.xyyh.oidc.endpoint;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.xyyh.oidc.client.ClientDetails;
@@ -18,10 +17,11 @@ import org.xyyh.oidc.endpoint.converter.AccessTokenConverter;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.exception.RefreshTokenValidationException;
 import org.xyyh.oidc.exception.TokenRequestValidationException;
-import org.xyyh.oidc.utils.StringCollectionUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,7 +35,6 @@ import static org.xyyh.oidc.core.PkceValidator.CODE_CHALLENGE_METHOD_PLAIN;
  */
 @RequestMapping("/oauth2/token")
 public class TokenEndpoint {
-    private static final String SPACE_REGEX = "[\\s+]";
 
     private final OAuth2AuthorizationCodeStore authorizationCodeService;
 
@@ -63,40 +62,26 @@ public class TokenEndpoint {
         this.jwkSet = jwkSet;
     }
 
-    @Autowired(required = false)
-    public void setUserAuthenticationManager(AuthenticationManager userAuthenticationManager) {
-    }
-
-    /**
-     * 不支持 get请求获取token,返回415状态码
-     *
-     * @return an empty {@link Map}
-     */
-    @GetMapping
-    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-    // 暂不支持get请求u
-    public Map<String, ?> getAccessToken() {
-        return Collections.emptyMap();
-    }
-
     /**
      * 授权码模式的授权请求
      *
      * @param client      连接信息
      * @param redirectUri 重定向uri
+     * @param httpRequest
      * @return accessToken信息
      * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.1">https://tools.ietf.org/html/rfc6749#section-4.1</a>
      */
     @PostMapping(params = {"code", "grant_type=authorization_code"})
     @ResponseBody
     public Map<String, Object> postAccessToken(
-        @AuthenticationPrincipal(expression = "clientDetails") ClientDetails client,
+        @AuthenticationPrincipal ClientDetails client,
         @RequestParam("code") String code,
         @RequestParam("redirect_uri") String redirectUri,
-        @RequestParam MultiValueMap<String, String> requestParams) throws TokenRequestValidationException {
+        @RequestParam MultiValueMap<String, String> requestParams,
+        HttpServletRequest httpRequest) throws TokenRequestValidationException, JOSEException {
         // 使用http basic来验证client，通过AuthorizationServerSecurityConfiguration实现
         // 验证grant type
-        validGrantTypes(client, "authorization_code");
+        validGrantTypes(client, AuthorizationGrantType.AUTHORIZATION_CODE);
         // 验证code
         // 首先验证code是否存在,没有找到指定的授权码信息时报错
         OidcAuthentication authentication = authorizationCodeService.consume(code)
@@ -111,8 +96,11 @@ public class TokenEndpoint {
         // 签发token
         OAuth2ServerAccessToken accessToken = tokenService.createAccessToken(authentication);
         Map<String, Object> response = accessTokenConverter.toAccessTokenResponse(accessToken);
-        if (request.getScopes().contains("openid")) {
-            response.put("id_token", idTokenGenerator.generate(authentication.getUser(), accessToken, jwkSet.getKeyByKeyId("default-sign")));
+        if (request.getScopes().contains(OidcScopes.OPENID)) {
+            String scheme = httpRequest.getScheme();
+            String host = httpRequest.getHeader("host");
+            String baseUrl = scheme + "://" + host + "/oauth2";
+            response.put("id_token", idTokenGenerator.generate(baseUrl, authentication.getUser(), accessToken, request, jwkSet.getKeyByKeyId("default-sign")));
         }
         return response;
     }
@@ -128,12 +116,11 @@ public class TokenEndpoint {
     @PostMapping(params = {"grant_type=refresh_token"})
     @ResponseBody
     public Map<String, Object> refreshToken(
-        Authentication authentication,
-        @AuthenticationPrincipal(expression = "clientDetails") ClientDetails client,
+        @AuthenticationPrincipal ClientDetails client,
         @RequestParam("refresh_token") String refreshToken,
         @RequestParam(value = "scope", required = false) String scope
     ) throws TokenRequestValidationException {
-        Set<String> requestScopes = StringCollectionUtils.split(scope);
+        Set<String> requestScopes = new HashSet<>(Arrays.asList(StringUtils.split(scope)));
         // 对token进行预检，如果检测失败，抛出异常
         try {
             OAuth2ServerAccessToken accessToken = tokenService.refreshAccessToken(refreshToken, client, requestScopes);
@@ -177,26 +164,6 @@ public class TokenEndpoint {
     }
 
     /**
-     * revoke a token<br>
-     * 废除一token,可以是access token,也可以是refresh token
-     *
-     * @param token         要移除的token的值
-     * @param tokenTypeHint tokenTypeHint
-     * @param client        client信息
-     * @see <a href=
-     * "https://tools.ietf.org/html/rfc7009#section-2.1">https://tools.ietf.org/html/rfc7009#section-2.1</a>
-     */
-    @PostMapping("revoke")
-    public void revoke(
-        @RequestParam("token") String token,
-        @RequestParam("token_type_hint") String tokenTypeHint,
-        @AuthenticationPrincipal(expression = "clientDetails") ClientDetails client) {
-        // TODO 需要支持跨域
-        // TODO 待实现
-        // 可能抛出 unsupported_token_type 异常
-    }
-
-    /**
      * 对请求进行pkce校验
      *
      * @param storeParams 储存的pkce参数
@@ -215,10 +182,10 @@ public class TokenEndpoint {
     }
 
 
-    private void validGrantTypes(ClientDetails client, @NotNull String grantType) throws TokenRequestValidationException {
+    private void validGrantTypes(ClientDetails client, @NotNull AuthorizationGrantType grantType) throws TokenRequestValidationException {
         Set<AuthorizationGrantType> grantTypes = client.getAuthorizedGrantTypes();
-        if (grantTypes.stream().map(AuthorizationGrantType::getValue).noneMatch(grantType::equals)) {
-            throw new TokenRequestValidationException("unauthorized_client");
+        if (!grantTypes.contains(grantType)) {
+            throw new TokenRequestValidationException("unsupported_grant_type");
         }
     }
 }

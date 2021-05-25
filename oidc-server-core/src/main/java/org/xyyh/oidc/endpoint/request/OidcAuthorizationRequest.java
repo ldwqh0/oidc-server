@@ -3,7 +3,7 @@ package org.xyyh.oidc.endpoint.request;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.util.MultiValueMap;
-import org.xyyh.oidc.exception.InvalidRedirectUriException;
+import org.xyyh.oidc.collect.CollectionUtils;
 import org.xyyh.oidc.exception.InvalidRequestParameterException;
 
 import java.io.Serializable;
@@ -71,14 +71,19 @@ public class OidcAuthorizationRequest implements Serializable {
      * @param parameters 其它请求参数
      * @return 授权请求
      */
-    public static OidcAuthorizationRequest from(MultiValueMap<String, String> parameters) throws InvalidRedirectUriException, InvalidRequestParameterException {
+    public static OidcAuthorizationRequest from(String clientId, String redirectUri, MultiValueMap<String, String> parameters) throws InvalidRequestParameterException {
         OidcAuthorizationRequest request = new OidcAuthorizationRequest();
-
+        request.clientId = clientId;
+        request.redirectUri = redirectUri;
+        List<String> stateParameters = parameters.get(OAuth2ParameterNames.STATE);
+        if (CollectionUtils.isNotEmpty(stateParameters)) {
+            if (stateParameters.size() > 1) {
+                throw new InvalidRequestParameterException(request, "invalid_request");
+            } else {
+                request.state = stateParameters.get(0);
+            }
+        }
         validRequestParameters(parameters, request);
-
-        request.clientId = parameters.getFirst(OAuth2ParameterNames.CLIENT_ID);
-        request.state = parameters.getFirst(OAuth2ParameterNames.STATE);
-
         String responseType = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE);
         if (StringUtils.isNotBlank(responseType)) {
             request.responseTypes = Arrays.stream(StringUtils.split(responseType))
@@ -101,21 +106,12 @@ public class OidcAuthorizationRequest implements Serializable {
         return request;
     }
 
-    private static void validRequestParameters(MultiValueMap<String, String> parameters, OidcAuthorizationRequest request) throws InvalidRedirectUriException, InvalidRequestParameterException {
-        // 首先校验redirect uri是否正确，这个关系到后续是否能够正常跳转
-        List<String> redirectUris = parameters.get(OAuth2ParameterNames.REDIRECT_URI);
-        if (redirectUris.size() > 1) {
-            // redirect uri 参数异常
-            throw new InvalidRedirectUriException(request);
-        } else if (redirectUris.size() == 1) {
-            request.redirectUri = redirectUris.get(0);
-        }
-
+    private static void validRequestParameters(MultiValueMap<String, String> parameters, OidcAuthorizationRequest request) throws InvalidRequestParameterException {
         // 每个参数只允许出现一次
         for (List<String> value : parameters.values()) {
             if (value.size() != 1) {
                 // 请求参数异常
-                throw new InvalidRequestParameterException(request, "parameter has more than one value");
+                throw new InvalidRequestParameterException(request, "invalid_request");
             }
         }
     }

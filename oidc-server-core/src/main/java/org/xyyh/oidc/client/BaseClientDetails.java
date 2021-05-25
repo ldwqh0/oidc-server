@@ -1,8 +1,11 @@
 package org.xyyh.oidc.client;
 
 import org.springframework.security.core.CredentialsContainer;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 
 import static org.xyyh.oidc.collect.Sets.hashSet;
@@ -23,17 +26,25 @@ public class BaseClientDetails implements CredentialsContainer, ClientDetails {
 
     private final Integer refreshTokenValiditySeconds;
     private final boolean requirePkce;
+    private final boolean accountExpired;
+    private final boolean accountLocked;
+    private final boolean credentialsExpired;
+    private final boolean enabled;
 
     public BaseClientDetails(
-            String clientId,
-            String clientSecret,
-            boolean autoApproval,
-            Set<String> scope,
-            Set<String> registeredRedirectUris,
-            Set<String> authorizedGrantTypes,
-            Integer accessTokenValiditySeconds,
-            Integer refreshTokenValiditySeconds,
-            boolean requirePkce) {
+        String clientId,
+        String clientSecret,
+        boolean autoApproval,
+        Set<String> scope,
+        Set<String> registeredRedirectUris,
+        Set<String> authorizedGrantTypes,
+        Integer accessTokenValiditySeconds,
+        Integer refreshTokenValiditySeconds,
+        boolean requirePkce,
+        boolean accountExpired,
+        boolean accountLocked,
+        boolean credentialsExpired,
+        boolean enabled) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.autoApproval = autoApproval;
@@ -43,6 +54,11 @@ public class BaseClientDetails implements CredentialsContainer, ClientDetails {
         this.accessTokenValiditySeconds = accessTokenValiditySeconds;
         this.refreshTokenValiditySeconds = refreshTokenValiditySeconds;
         this.requirePkce = requirePkce;
+
+        this.accountExpired = accountExpired;
+        this.accountLocked = accountLocked;
+        this.credentialsExpired = credentialsExpired;
+        this.enabled = enabled;
     }
 
     @Override
@@ -85,6 +101,12 @@ public class BaseClientDetails implements CredentialsContainer, ClientDetails {
     }
 
     @Override
+    public String getType() {
+        // TODO　客户端类型
+        return "null";
+    }
+
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -123,8 +145,8 @@ public class BaseClientDetails implements CredentialsContainer, ClientDetails {
     @Override
     public String toString() {
         return "BaseClientDetails [clientId=" + clientId + ", clientSecret=" + clientSecret + ", scopes=" + scopes
-                + ", registeredRedirectUris=" + registeredRedirectUris + ", authorizedGrantTypes="
-                + authorizedGrantTypes + "]";
+            + ", registeredRedirectUris=" + registeredRedirectUris + ", authorizedGrantTypes="
+            + authorizedGrantTypes + "]";
     }
 
     @Override
@@ -135,5 +157,41 @@ public class BaseClientDetails implements CredentialsContainer, ClientDetails {
     @Override
     public void eraseCredentials() {
         this.clientSecret = null;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // TODO 这里待处理，需要对client进行分权
+        return Collections.emptyList();
+    }
+
+    @Override
+    public String getPassword() {
+        return this.clientSecret;
+    }
+
+    @Override
+    public String getUsername() {
+        return this.clientId;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return !this.accountExpired;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return !this.accountLocked;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return !this.credentialsExpired;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.enabled;
     }
 }

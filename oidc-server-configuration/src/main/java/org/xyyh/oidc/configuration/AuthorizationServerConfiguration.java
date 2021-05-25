@@ -1,5 +1,6 @@
 package org.xyyh.oidc.configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
@@ -8,14 +9,10 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.xyyh.oidc.client.ClientDetailsService;
 import org.xyyh.oidc.client.InMemoryClientDetailsService;
 import org.xyyh.oidc.core.*;
-import org.xyyh.oidc.endpoint.AuthorizationEndpoint;
-import org.xyyh.oidc.endpoint.JWKSetEndpoint;
-import org.xyyh.oidc.endpoint.TokenEndpoint;
-import org.xyyh.oidc.endpoint.TokenIntrospectionEndpoint;
+import org.xyyh.oidc.endpoint.*;
 import org.xyyh.oidc.endpoint.converter.AccessTokenConverter;
 import org.xyyh.oidc.endpoint.converter.DefaultAccessTokenConverter;
 import org.xyyh.oidc.provider.*;
@@ -44,6 +41,11 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
+    public ServerDiscoveryEndpoint discoveryEndpoint(ObjectMapper objectMapper) {
+        return new ServerDiscoveryEndpoint(objectMapper);
+    }
+
+    @Bean
     public TokenEndpoint tokenEndpoint(OAuth2AuthorizationCodeStore authorizationCodeService,
                                        PkceValidator pkceValidator,
                                        OAuth2AuthorizationServerTokenService tokenService,
@@ -69,12 +71,20 @@ public class AuthorizationServerConfiguration {
         return new TokenIntrospectionEndpoint(tokenIntrospectionService);
     }
 
+    @Bean
+    public UserInfoEndpoint userInfoEndpoint() {
+        return new UserInfoEndpoint();
+    }
+
     /**
      *
      */
     @Bean
     public JWKSet jwkSet() throws JOSEException {
-        RSAKey rsaKey = new RSAKeyGenerator(2048).keyID("default-sign").keyUse(KeyUse.SIGNATURE).generate();
+        RSAKey rsaKey = new RSAKeyGenerator(2048)
+            .keyID("default-sign")
+            .keyUse(KeyUse.SIGNATURE)
+            .generate();
         return new JWKSet(rsaKey);
     }
 

@@ -15,10 +15,7 @@ public class DefaultOAuth2AuthorizationRequestValidator implements OAuth2Authori
 
 
     @Override
-    public void validate(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRedirectUriException, InvalidRequestParameterException {
-
-        // 验证redirect uri
-        validRedirectUri(request, client);
+    public void validate(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRequestParameterException {
 
         // 验证scope
         validScope(request, client);
@@ -29,23 +26,6 @@ public class DefaultOAuth2AuthorizationRequestValidator implements OAuth2Authori
         // 验证pkce
         validPkceRequest(request, client);
 
-    }
-
-    // 验证redirect uri,oauth 2.1 协议规范必须使用字符串匹配校验，不推荐使用通配符校验
-    // https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-02#section-4.1.1.1
-    private void validRedirectUri(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRedirectUriException {
-        Set<String> registeredRedirectUris = client.getRegisteredRedirectUris();
-        String redirectUri = request.getRedirectUri();
-        if (StringUtils.isBlank(redirectUri)) {
-            // 如果请求参数中不包括redirect uri ,判断client的redirect uri 是否唯一
-            if (registeredRedirectUris.size() != 1) {
-                throw new InvalidRedirectUriException(request);
-            }
-        } else {
-            if (CollectionUtils.isEmpty(registeredRedirectUris) || !registeredRedirectUris.contains(redirectUri)) {
-                throw new InvalidRedirectUriException(request);
-            }
-        }
     }
 
     private void validScope(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRequestScopeException {

@@ -1,23 +1,25 @@
 package org.xyyh.oidc.provider;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.xyyh.oidc.core.IdTokenGenerator;
 import org.xyyh.oidc.core.OAuth2ServerAccessToken;
+import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
+import static org.springframework.security.oauth2.core.oidc.IdTokenClaimNames.NONCE;
 import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.*;
 
 /**
@@ -30,14 +32,18 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
     private final Logger log = LoggerFactory.getLogger(DefaultIdTokenGenerator.class);
 
     @Override
-    public String generate(OidcUserDetails user, OAuth2ServerAccessToken accessToken, JWK jwk) {
+    public String generate(String issuer, OidcUserDetails user, OAuth2ServerAccessToken accessToken, OidcAuthorizationRequest request, JWK jwk) throws JOSEException {
         Set<String> scope = accessToken.getScopes();
         Map<String, Object> claims = user.getClaims();
-        JWSHeader header = new JWSHeader(JWSAlgorithm.RS512);
+        Algorithm algorithm = jwk.getAlgorithm();
+        if (Objects.isNull(algorithm) || !JWSAlgorithm.class.isAssignableFrom(algorithm.getClass())) {
+            algorithm = JWSAlgorithm.RS256;
+        }
+        JWSHeader header = new JWSHeader.Builder((JWSAlgorithm) algorithm).type(JOSEObjectType.JWT).build();
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-            // .issuer("") // 发行人
+            .issuer(issuer) // 发行人
             .subject(user.getSubject())
-            // .audience("") // 接收人
+            .audience(request.getClientId()) // 接收人
             // 过期时间和access token时间一致
             .expirationTime(new Date(accessToken.getExpiresAt().toEpochMilli()))
             // 签发时间
@@ -47,7 +53,11 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         // 暂时不包含jti
         // .jwtID("");  // id_token不包含jti
         claimsBuilder.claim("acr", "");
-        if (scope.contains("profile")) {
+        String nonce = request.getAdditionalParameters().get(NONCE);
+        if (StringUtils.isNotBlank(nonce)) {
+            claimsBuilder.claim(NONCE, nonce);
+        }
+        if (scope.contains(OidcScopes.PROFILE)) {
             claimsBuilder.claim(NAME, user.getUsername())
                 .claim(GIVEN_NAME, claims.get(GIVEN_NAME))
                 .claim(FAMILY_NAME, claims.get(FAMILY_NAME))
@@ -63,14 +73,14 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
                 .claim(LOCALE, claims.get(LOCALE))
                 .claim(UPDATED_AT, claims.get(UPDATED_AT));
         }
-        if (scope.contains("email")) {
+        if (scope.contains(OidcScopes.EMAIL)) {
             claimsBuilder.claim(EMAIL, claims.get(EMAIL))
                 .claim(EMAIL_VERIFIED, claims.get(EMAIL_VERIFIED));
         }
-        if (scope.contains("address")) {
+        if (scope.contains(OidcScopes.ADDRESS)) {
             claimsBuilder.claim(ADDRESS, claims.get(ADDRESS));
         }
-        if (scope.contains("phone")) {
+        if (scope.contains(OidcScopes.PHONE)) {
             claimsBuilder.claim(PHONE_NUMBER, claims.get(PHONE_NUMBER))
                 .claim(PHONE_NUMBER_VERIFIED, claims.get(PHONE_NUMBER_VERIFIED));
         }
@@ -81,7 +91,7 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
             return jwt.serialize();
         } catch (JOSEException e) {
             log.error("sign jwt error", e);
-            return "";
+            throw e;
         }
     }
 }

@@ -1,5 +1,6 @@
 package org.xyyh.oidc.client;
 
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
 import java.io.Serializable;
@@ -9,7 +10,7 @@ import java.util.Set;
  * 一个oauth client信息
  */
 
-public interface ClientDetails extends Serializable {
+public interface ClientDetails extends UserDetails, Serializable {
 
     boolean isAutoApproval();
 
@@ -52,5 +53,8 @@ public interface ClientDetails extends Serializable {
      * @return
      */
     boolean isRequirePkce();
+
+
+    String getType();
 
 }

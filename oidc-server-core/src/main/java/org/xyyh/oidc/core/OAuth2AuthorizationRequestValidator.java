@@ -2,7 +2,6 @@ package org.xyyh.oidc.core;
 
 import org.xyyh.oidc.client.ClientDetails;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
-import org.xyyh.oidc.exception.InvalidRedirectUriException;
 import org.xyyh.oidc.exception.InvalidRequestParameterException;
 
 /**
@@ -18,6 +17,6 @@ public interface OAuth2AuthorizationRequestValidator {
      * @param request 用户授权请求
      * @param client  连接程序
      */
-    void validate(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRedirectUriException, InvalidRequestParameterException;
+    void validate(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRequestParameterException;
 
 }

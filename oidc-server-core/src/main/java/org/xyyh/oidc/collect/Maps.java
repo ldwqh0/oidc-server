@@ -16,6 +16,12 @@ public final class Maps {
         return !isEmpty(map);
     }
 
+    public static <K, V> HashMap<K, V> hashMap(K key, V value) {
+        HashMap<K, V> result = new HashMap<>();
+        result.put(key, value);
+        return result;
+    }
+
     public static <K, V> Map<K, V> hashMap() {
         return new HashMap<>();
     }

@@ -1,18 +1,25 @@
 package org.xyyh.oidc.exception;
 
-import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
+public class UnauthorizedClientException extends Exception {
 
-public class UnauthorizedClientException extends InvalidRequestException {
+    private final String clientId;
 
-    public UnauthorizedClientException(OidcAuthorizationRequest request) {
-        super(request, "unauthorized_client");
+    public UnauthorizedClientException() {
+        this.clientId = null;
     }
 
-    public UnauthorizedClientException(OidcAuthorizationRequest request, Throwable ex) {
-        super(request, "unauthorized_client", ex);
+    public UnauthorizedClientException(Throwable e) {
+        super("unauthorized_client", e);
+        this.clientId = null;
     }
 
-    public UnauthorizedClientException(OidcAuthorizationRequest request, String message, Throwable ex) {
-        super(request, message, ex);
+    public UnauthorizedClientException(String clientId) {
+        super("unauthorized_client");
+        this.clientId = clientId;
+    }
+
+    public UnauthorizedClientException(String clientId, Throwable throwable) {
+        super("unauthorized_client", throwable);
+        this.clientId = clientId;
     }
 }
