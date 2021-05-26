@@ -2,7 +2,6 @@ package org.xyyh.oidc.endpoint;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
@@ -279,9 +278,7 @@ public class AuthorizationEndpoint {
             });
             builder.fragment(fragmentValues.toString());
         }
-        RedirectView redirectView = new RedirectView(builder.toUriString());
-        redirectView.setStatusCode(HttpStatus.SEE_OTHER);
-        return redirectView;
+        return new RedirectView(builder.toUriString());
     }
 
     /**
@@ -297,7 +294,7 @@ public class AuthorizationEndpoint {
     }
 
     /**
-     * 处理 InvalidRedirectUriException 异常
+     * 处理 InvalidRedirectUriException 异常，这个异常不能跳转
      *
      * @param ex 要处理的异常
      */
@@ -315,24 +312,20 @@ public class AuthorizationEndpoint {
      * @return 异常视图
      */
     @ExceptionHandler({InvalidRequestParameterException.class})
-    public View handleError(InvalidRequestParameterException ex) throws UnauthorizedClientException {
+    public ModelAndView handleError(InvalidRequestParameterException ex) throws UnauthorizedClientException {
         OidcAuthorizationRequest request = ex.getRequest();
-        String clientId = request.getClientId();
-        try {
-            ClientDetails client = clientDetailsService.loadClientByClientId(clientId);
-        } catch (NoSuchClientException e) {
-//            throw new UnauthorizedClientException(request, e);
-        }
         Map<String, String> error = Maps.hashMap();
         error.put("error", ex.getMessage());
         String state = request.getState();
         if (StringUtils.isNotEmpty(state)) {
             error.put("state", state);
         }
-        return buildRedirectView(request.getRedirectUri(), error, null);
+        return new ModelAndView(buildRedirectView(request.getRedirectUri(), error, null));
     }
 
-
+    /**
+     * 创建授权码
+     */
     private OAuth2AuthorizationCode generateAuthorizationCode() {
         String codeValue = stringGenerator.generateKey();
         Instant issueAt = Instant.now();
@@ -341,7 +334,5 @@ public class AuthorizationEndpoint {
         Instant expireAt = issueAt.plusSeconds(periodOfValidity);
         return OAuth2AuthorizationCode.of(codeValue, issueAt, expireAt);
     }
-
-
 }
 
