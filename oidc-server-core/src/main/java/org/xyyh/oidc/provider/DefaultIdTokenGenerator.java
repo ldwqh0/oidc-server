@@ -5,6 +5,7 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,36 +54,26 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         // 暂时不包含jti
         // .jwtID("");  // id_token不包含jti
         claimsBuilder.claim("acr", "");
-        String nonce = request.getAdditionalParameters().get(NONCE);
+        String nonce = request.getParameters().get(NONCE);
         if (StringUtils.isNotBlank(nonce)) {
             claimsBuilder.claim(NONCE, nonce);
         }
         if (scope.contains(OidcScopes.PROFILE)) {
-            claimsBuilder.claim(NAME, user.getUsername())
-                .claim(GIVEN_NAME, claims.get(GIVEN_NAME))
-                .claim(FAMILY_NAME, claims.get(FAMILY_NAME))
-                .claim(MIDDLE_NAME, claims.get(MIDDLE_NAME))
-                .claim(NICKNAME, claims.get(NICKNAME))
-                .claim(PREFERRED_USERNAME, claims.get(PREFERRED_USERNAME))
-                .claim(PROFILE, claims.get(PROFILE))
-                .claim(PICTURE, claims.get(PICTURE))
-                .claim(WEBSITE, claims.get(WEBSITE))
-                .claim(GENDER, claims.get(GENDER)) // female and male
-                .claim(BIRTHDATE, claims.get(BIRTHDATE))
-                .claim(ZONEINFO, claims.get(ZONEINFO))
-                .claim(LOCALE, claims.get(LOCALE))
-                .claim(UPDATED_AT, claims.get(UPDATED_AT));
+            claimsBuilder.claim(NAME, user.getUsername());
+            copyClaims(claimsBuilder, claims,
+                GIVEN_NAME, GIVEN_NAME, FAMILY_NAME, MIDDLE_NAME, NICKNAME, PREFERRED_USERNAME,
+                PROFILE, PICTURE, WEBSITE, GENDER, BIRTHDATE,
+                ZONEINFO, LOCALE, UPDATED_AT
+            );
         }
         if (scope.contains(OidcScopes.EMAIL)) {
-            claimsBuilder.claim(EMAIL, claims.get(EMAIL))
-                .claim(EMAIL_VERIFIED, claims.get(EMAIL_VERIFIED));
+            copyClaims(claimsBuilder, claims, EMAIL, EMAIL_VERIFIED);
         }
         if (scope.contains(OidcScopes.ADDRESS)) {
-            claimsBuilder.claim(ADDRESS, claims.get(ADDRESS));
+            copyClaims(claimsBuilder, claims, ADDRESS);
         }
         if (scope.contains(OidcScopes.PHONE)) {
-            claimsBuilder.claim(PHONE_NUMBER, claims.get(PHONE_NUMBER))
-                .claim(PHONE_NUMBER_VERIFIED, claims.get(PHONE_NUMBER_VERIFIED));
+            copyClaims(claimsBuilder, claims, PHONE_NUMBER, PHONE_NUMBER_VERIFIED);
         }
         SignedJWT jwt = new SignedJWT(header, claimsBuilder.build());
         try {
@@ -92,6 +83,15 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         } catch (JOSEException e) {
             log.error("sign jwt error", e);
             throw e;
+        }
+    }
+
+    private void copyClaims(JWTClaimsSet.Builder builder, Map<String, Object> source, String... keys) {
+        for (String key : keys) {
+            Object value = source.get(key);
+            if (ObjectUtils.isNotEmpty(value)) {
+                builder.claim(key, value);
+            }
         }
     }
 }

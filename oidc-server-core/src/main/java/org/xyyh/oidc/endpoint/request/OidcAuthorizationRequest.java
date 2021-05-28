@@ -22,20 +22,35 @@ public class OidcAuthorizationRequest implements Serializable {
 
     private static final long serialVersionUID = 144721905123198109L;
 
-    private String clientId;
+    private final String clientId;
 
-    private String redirectUri;
+    private final String redirectUri;
 
-    private Set<String> scopes = Collections.emptySet();
+    private final Set<String> scopes;
 
-    private String state;
+    private final String state;
 
-    private Set<OidcAuthorizationResponseType> responseTypes = Collections.emptySet();
+    private final Set<OidcAuthorizationResponseType> responseTypes;
 
-    private Map<String, String> additionalParameters = Collections.emptyMap();
+    private final Map<String, String> parameters;
 
-    private OidcAuthorizationRequest() {
+    private OidcAuthorizationRequest(String clientId, String redirectUri, String state, Set<String> scopes, Set<OidcAuthorizationResponseType> responseTypes, Map<String, String> parameters) {
+        this.clientId = clientId;
+        this.redirectUri = redirectUri;
+        this.state = state;
+        this.scopes = Collections.unmodifiableSet(scopes);
+        this.responseTypes = Collections.unmodifiableSet(responseTypes);
+        this.parameters = Collections.unmodifiableMap(parameters);
     }
+
+    private OidcAuthorizationRequest(String clientId, String redirectUri, String state) {
+        this(clientId, redirectUri, state, Collections.emptySet(), Collections.emptySet(), Collections.emptyMap());
+    }
+
+    private OidcAuthorizationRequest(String clientId, String redirectUri) {
+        this(clientId, redirectUri, null);
+    }
+
 
     public Set<OidcAuthorizationResponseType> getResponseTypes() {
         return this.responseTypes;
@@ -57,70 +72,60 @@ public class OidcAuthorizationRequest implements Serializable {
         return this.state;
     }
 
-    public Map<String, String> getAdditionalParameters() {
-        return this.additionalParameters;
+    public Map<String, String> getParameters() {
+        return this.parameters;
     }
 
-    public void setRedirectUri(String redirectUri) {
-        this.redirectUri = redirectUri;
-    }
 
     /**
      * 根据传入参数，创建授权请求信息
      *
-     * @param parameters 其它请求参数
+     * @param requestParameters 其它请求参数
      * @return 授权请求
      */
-    public static OidcAuthorizationRequest from(String clientId, String redirectUri, MultiValueMap<String, String> parameters) throws InvalidRequestParameterException {
-        OidcAuthorizationRequest request = new OidcAuthorizationRequest();
-        request.clientId = clientId;
-        request.redirectUri = redirectUri;
-        List<String> stateParameters = parameters.get(OAuth2ParameterNames.STATE);
+    public static OidcAuthorizationRequest of(String clientId, String redirectUri, MultiValueMap<String, String> requestParameters) throws InvalidRequestParameterException {
+        String state = null;
+        Set<String> scopes;
+        Set<OidcAuthorizationResponseType> responseTypes;
+
+        List<String> stateParameters = requestParameters.get(OAuth2ParameterNames.STATE);
         if (CollectionUtils.isNotEmpty(stateParameters)) {
             if (stateParameters.size() > 1) {
-                throw new InvalidRequestParameterException(request, "invalid_request");
+                throw new InvalidRequestParameterException(new OidcAuthorizationRequest(clientId, redirectUri), "invalid_request");
             } else {
-                request.state = stateParameters.get(0);
+                state = stateParameters.get(0);
             }
         }
-        validRequestParameters(parameters, request);
-        String responseType = parameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE);
-        if (StringUtils.isNotBlank(responseType)) {
-            request.responseTypes = Arrays.stream(StringUtils.split(responseType))
+        if (!validRequestParameters(requestParameters)) {
+            throw new InvalidRequestParameterException(new OidcAuthorizationRequest(clientId, redirectUri, state), "invalid_request");
+        }
+        String scopeParameter = requestParameters.getFirst(OAuth2ParameterNames.SCOPE);
+        if (StringUtils.isNotBlank(scopeParameter)) {
+            scopes = Arrays.stream(StringUtils.split(scopeParameter)).collect(Collectors.toSet());
+        } else {
+            scopes = Collections.emptySet();
+        }
+        String responseTypeParameter = requestParameters.getFirst(OAuth2ParameterNames.RESPONSE_TYPE);
+        if (StringUtils.isNotBlank(responseTypeParameter)) {
+            responseTypes = Arrays.stream(StringUtils.split(responseTypeParameter))
                 .map(OidcAuthorizationResponseType::from)
                 .collect(Collectors.toSet());
-
+        } else {
+            responseTypes = Collections.emptySet();
         }
-
-        String scopes = parameters.getFirst(OAuth2ParameterNames.SCOPE);
-        if (StringUtils.isNotBlank(scopes)) {
-            request.scopes = new HashSet<>(Arrays.asList(StringUtils.split(scopes)));
-        }
-
-        request.additionalParameters = new HashMap<>();
-        parameters.forEach((key, values) -> {
-            if (isNotAuthorizationRequestParam(key)) {
-                request.additionalParameters.put(key, values.get(0));
-            }
-        });
-        return request;
+        Map<String, String> parameters = requestParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().get(0)));
+        return new OidcAuthorizationRequest(
+            clientId,
+            redirectUri,
+            state,
+            scopes,
+            responseTypes,
+            parameters
+        );
     }
 
-    private static void validRequestParameters(MultiValueMap<String, String> parameters, OidcAuthorizationRequest request) throws InvalidRequestParameterException {
-        // 每个参数只允许出现一次
-        for (List<String> value : parameters.values()) {
-            if (value.size() != 1) {
-                // 请求参数异常
-                throw new InvalidRequestParameterException(request, "invalid_request");
-            }
-        }
-    }
-
-    private static boolean isNotAuthorizationRequestParam(String param) {
-        return !(OAuth2ParameterNames.RESPONSE_TYPE.equals(param) ||
-            OAuth2ParameterNames.CLIENT_ID.equals(param) ||
-            OAuth2ParameterNames.REDIRECT_URI.equals(param) ||
-            OAuth2ParameterNames.SCOPE.equals(param) ||
-            OAuth2ParameterNames.STATE.equals(param));
+    private static boolean validRequestParameters(MultiValueMap<String, String> parameters) throws InvalidRequestParameterException {
+        // 每个参数只允许出现一次，不运行空参数
+        return parameters.values().stream().map(List::size).allMatch(v -> v == 1);
     }
 }

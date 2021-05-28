@@ -7,9 +7,7 @@ import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.xyyh.oidc.client.ClientDetails;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
 
-import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
@@ -22,16 +20,18 @@ public interface OidcAuthentication extends Authentication, CredentialsContainer
     /**
      * the {@link ClientDetails}
      */
-    @NotNull ClientDetails getClient();
+    ClientDetails getClient();
 
     // todo 这个是不是为空有待考证
     @Nullable
-    OidcUserDetails getUser();
+    Authentication getUser();
 
     /**
      * the authorized scopes
      */
     Set<String> getScopes();
+
+    ApprovalResult getApprovalResult();
 
     /**
      * the {@link  OidcAuthorizationRequest}
@@ -40,16 +40,24 @@ public interface OidcAuthentication extends Authentication, CredentialsContainer
      */
     OidcAuthorizationRequest getRequest();
 
-    static OidcAuthentication of(ApprovalResult approvalResult, ClientDetails client, OidcUserDetails user) {
-        return new DefaultOidcAuthenticationToken(null, approvalResult, client, user);
+    static OidcAuthentication of(ApprovalResult approvalResult, ClientDetails client, Authentication user) {
+        return new DefaultOidcAuthenticationToken(null, approvalResult, client, user, null);
     }
 
 
     static OidcAuthentication of(OidcAuthorizationRequest request,
                                  ApprovalResult result,
                                  ClientDetails client,
-                                 OidcUserDetails user) {
-        return new DefaultOidcAuthenticationToken(request, result, client, user);
+                                 Authentication user) {
+        return new DefaultOidcAuthenticationToken(request, result, client, user, null);
+    }
+
+    static OidcAuthentication from(OidcAuthentication authentication, Object details) {
+        return new DefaultOidcAuthenticationToken(authentication.getRequest(), authentication.getApprovalResult(),
+            authentication.getClient(),
+            authentication.getUser(),
+            details
+        );
     }
 
 }
@@ -66,9 +74,11 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
 
     private final ApprovalResult approvalResult;
 
-    private final OidcUserDetails user;
+    private final Authentication user;
 
     private final OidcAuthorizationRequest request;
+
+    private final Object details;
 
     @Override
     public boolean isAuthenticated() {
@@ -91,20 +101,23 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
      */
     public DefaultOidcAuthenticationToken(OidcAuthorizationRequest request,
                                           ApprovalResult result,
-                                          @NotNull ClientDetails client,
-                                          OidcUserDetails user) {
+                                          ClientDetails client,
+                                          Authentication user,
+                                          Object details) {
         this.client = client;
         this.approvalResult = result;
         this.user = user;
         this.request = request;
+        this.details = details;
     }
 
+    @Override
     public ApprovalResult getApprovalResult() {
         return approvalResult;
     }
 
     @Override
-    public OidcUserDetails getUser() {
+    public Authentication getUser() {
         return user;
     }
 
@@ -121,7 +134,7 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
     @Override
     public String getName() {
         return Objects.isNull(this.user) ? this.request.getClientId()
-            : this.user.getUsername();
+            : this.user.getName();
     }
 
     @Override
@@ -131,9 +144,7 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
 
     @Override
     public Object getDetails() {
-        // TODO 这个有待进一步处理 details不仅应该包含user,还要包含client
-        return null;
-//        return Objects.isNull(this.user) ? this.approvalResult : this.user.getDetails();
+        return details;
     }
 
     @Override

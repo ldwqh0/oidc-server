@@ -29,9 +29,7 @@ public class AuthorizationServerConfiguration {
     public AuthorizationEndpoint authorizationEndpoint(ClientDetailsService clientDetailsService,
                                                        OAuth2AuthorizationRequestValidator oAuth2RequestValidator,
                                                        UserApprovalHandler userApprovalHandler,
-                                                       OAuth2AuthorizationCodeStore authorizationCodeService,
-                                                       OAuth2AuthorizationServerTokenService tokenServices,
-                                                       AccessTokenConverter accessTokenConverter) {
+                                                       OAuth2AuthorizationCodeStore authorizationCodeService) {
         return new AuthorizationEndpoint(
             clientDetailsService,
             oAuth2RequestValidator,
@@ -42,7 +40,7 @@ public class AuthorizationServerConfiguration {
 
     @Bean
     public ServerDiscoveryEndpoint discoveryEndpoint(ObjectMapper objectMapper) {
-        return new ServerDiscoveryEndpoint(objectMapper);
+        return new ServerDiscoveryEndpoint();
     }
 
     @Bean
@@ -80,6 +78,7 @@ public class AuthorizationServerConfiguration {
      *
      */
     @Bean
+    @ConditionalOnMissingBean(JWKSet.class)
     public JWKSet jwkSet() throws JOSEException {
         RSAKey rsaKey = new RSAKeyGenerator(2048)
             .keyID("default-sign")

@@ -2,6 +2,7 @@ package org.xyyh.oidc.endpoint;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
@@ -68,6 +69,8 @@ public class AuthorizationEndpoint {
      * 返回授权页面
      *
      * @param model         数据模型
+     * @param clientIds     clientId
+     * @param redirectUris  redirect 请求的回调地址，再oauth2
      * @param sessionStatus sessionStatus
      * @return 授权页面模型和视图
      * @see <a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-02#section-4.1.2.1">Authorization Response Error Response</a>
@@ -75,11 +78,12 @@ public class AuthorizationEndpoint {
     @RequestMapping(params = {OAuth2ParameterNames.RESPONSE_TYPE, OAuth2ParameterNames.CLIENT_ID})
     public ModelAndView authorize(
         Map<String, Object> model,
+        Authentication userAuthentication,
+        SessionStatus sessionStatus,
         @RequestParam(OAuth2ParameterNames.CLIENT_ID) List<String> clientIds,
         @RequestParam(value = OAuth2ParameterNames.REDIRECT_URI, required = false) List<String> redirectUris,
         @RequestParam MultiValueMap<String, String> params,
-        @AuthenticationPrincipal OidcUserDetails user,
-        SessionStatus sessionStatus) throws UnauthorizedClientException, InvalidRedirectUriException, InvalidRequestParameterException {
+        @AuthenticationPrincipal OidcUserDetails user) throws UnauthorizedClientException, InvalidRedirectUriException, InvalidRequestParameterException {
         /*
          * If the request fails due to a missing, invalid, or mismatching redirect URI,
          * or if the client identifier is missing or invalid,
@@ -100,15 +104,10 @@ public class AuthorizationEndpoint {
         }
         // 判断并校验redirectUri
         redirectUrl = getRedirectUri(redirectUris, clientId, client);
-        OidcAuthorizationRequest authorizationRequest = OidcAuthorizationRequest.from(clientId, redirectUrl, params);
+        OidcAuthorizationRequest authorizationRequest = OidcAuthorizationRequest.of(clientId, redirectUrl, params);
         // 加载client信息
         // 对请求进行检验，并抛出相应的异常
         oAuth2RequestValidator.validate(authorizationRequest, client);
-        // 如果请求参数中不带redirect uri,则使用默认的redirect uri
-        if (StringUtils.isBlank(authorizationRequest.getRedirectUri())) {
-            authorizationRequest.setRedirectUri(client.getRegisteredRedirectUris().iterator().next());
-        }
-
         // 如果应用配置为直接通过授权
         if (client.isAutoApproval()) {
             sessionStatus.setComplete();
@@ -116,14 +115,14 @@ public class AuthorizationEndpoint {
                 authorizationRequest,
                 ApprovalResult.of(authorizationRequest.getScopes(), authorizationRequest.getRedirectUri()),
                 client,
-                user
+                userAuthentication
             ));
         } else {
             ApprovalResult preResult = userApprovalHandler.preCheck(authorizationRequest, user);
             // 进行请求预检
             if (preResult.isApproved()) {
                 sessionStatus.setComplete();
-                return new ModelAndView(getAuthorizationSuccessRedirectView(authorizationRequest, preResult, client, user));
+                return new ModelAndView(getAuthorizationSuccessRedirectView(authorizationRequest, preResult, client, userAuthentication));
             } else {
                 model.put(OAUTH2_AUTHORIZATION_REQUEST, authorizationRequest);
                 model.put(OAUTH2_AUTHORIZATION_CLIENT, client);
@@ -198,17 +197,18 @@ public class AuthorizationEndpoint {
         @RequestParam Map<String, String> approvalParameters,
         @SessionAttribute(OAUTH2_AUTHORIZATION_CLIENT) ClientDetails client,
         @SessionAttribute(OAUTH2_AUTHORIZATION_REQUEST) OidcAuthorizationRequest authorizationRequest,
-        @AuthenticationPrincipal OidcUserDetails userAuthentication,
+        Authentication userAuthentication,
+        @AuthenticationPrincipal OidcUserDetails user,
         SessionStatus sessionStatus) throws AccessDeniedException {
         // 当提交用户授权信息之后，将session标记为完成
         sessionStatus.setComplete();
         // 获取用户授权结果
-        ApprovalResult approvalResult = userApprovalHandler.approval(authorizationRequest, userAuthentication, approvalParameters);
+        ApprovalResult approvalResult = userApprovalHandler.approval(authorizationRequest, user, approvalParameters);
         // 如果授权不通过，直接返回
         if (!approvalResult.isApproved()) {
             throw new AccessDeniedException(authorizationRequest);
         } else {
-            userApprovalHandler.updateAfterApproval(authorizationRequest, userAuthentication, approvalResult);
+            userApprovalHandler.updateAfterApproval(authorizationRequest, user, approvalResult);
             return getAuthorizationSuccessRedirectView(authorizationRequest, approvalResult, client, userAuthentication);
         }
     }
@@ -216,16 +216,16 @@ public class AuthorizationEndpoint {
     /**
      * 授权成功的跳转
      *
-     * @param request        授权请求
-     * @param approvalResult 授权结果
-     * @param user           用户信息
-     * @param client         client
+     * @param request            授权请求
+     * @param approvalResult     授权结果
+     * @param userAuthentication 用户信息
+     * @param client             client
      * @return 授权成功之后跳转的地址
      */
     private View getAuthorizationSuccessRedirectView(OidcAuthorizationRequest request,
                                                      ApprovalResult approvalResult,
                                                      ClientDetails client,
-                                                     OidcUserDetails user) {
+                                                     Authentication userAuthentication) {
         Map<String, String> query = new LinkedHashMap<>();
         String state = request.getState();
         if (StringUtils.isNotEmpty(state)) {
@@ -236,7 +236,7 @@ public class AuthorizationEndpoint {
             // 创建授权码
             OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode();
             // 创建并保存授权码
-            authorizationCode = authorizationCodeStorageService.save(authorizationCode, OidcAuthentication.of(request, approvalResult, client, user));
+            authorizationCode = authorizationCodeStorageService.save(authorizationCode, OidcAuthentication.of(request, approvalResult, client, userAuthentication));
             query.put("code", authorizationCode.getValue());
         }
         if (requestResponseTypes.contains(OidcAuthorizationResponseType.ID_TOKEN)) {

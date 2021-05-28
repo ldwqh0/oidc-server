@@ -11,7 +11,6 @@ import org.xyyh.oidc.client.ClientDetails;
 import org.xyyh.oidc.collect.CollectionUtils;
 import org.xyyh.oidc.core.*;
 import org.xyyh.oidc.exception.RefreshTokenValidationException;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
 import org.xyyh.oidc.userdetails.OidcUserDetailsService;
 
 import java.time.Instant;
@@ -90,7 +89,7 @@ public class DefaultTokenService implements OAuth2AuthorizationServerTokenServic
             // TODO details 需要处理,暂时没有向Authentication中setDetails 根据规则，应该设置一些来自请求的信息，比如请求ip啥的，参考spring的登录请求
             Authentication user = preProviderManager.authenticate(preToken);
             // 创建一个新的OAuth2Authentication
-            OidcAuthentication authentication = OidcAuthentication.of(preAuthentication.getRequest(), ApprovalResult.of(scopeToUse), client, (OidcUserDetails) user.getPrincipal());
+            OidcAuthentication authentication = OidcAuthentication.of(preAuthentication.getRequest(), ApprovalResult.of(scopeToUse), client, user);
             // 删除之前的access token
             accessTokenStore.deleteByRefreshToken(internRefreshTokenValue);
             // 创建一个新的token

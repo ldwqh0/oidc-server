@@ -17,13 +17,11 @@ import org.xyyh.oidc.endpoint.converter.AccessTokenConverter;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.exception.RefreshTokenValidationException;
 import org.xyyh.oidc.exception.TokenRequestValidationException;
+import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.xyyh.oidc.core.PkceValidator.CODE_CHALLENGE_METHOD_PLAIN;
 
@@ -63,12 +61,13 @@ public class TokenEndpoint {
     }
 
     /**
-     * 授权码模式的授权请求
-     *
-     * @param client      连接信息
-     * @param redirectUri 重定向uri
-     * @param httpRequest
-     * @return accessToken信息
+     * @param client        连接信息
+     * @param code          授权码
+     * @param redirectUri   重定向uri
+     * @param requestParams 请求参数
+     * @param httpRequest   http请求信息
+     * @throws TokenRequestValidationException 如果校验失败，抛出该异常
+     * @throws JOSEException                   生成 id-token错误时，引发该异常
      * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.1">https://tools.ietf.org/html/rfc6749#section-4.1</a>
      */
     @PostMapping(params = {"code", "grant_type=authorization_code"})
@@ -78,6 +77,7 @@ public class TokenEndpoint {
         @RequestParam("code") String code,
         @RequestParam("redirect_uri") String redirectUri,
         @RequestParam MultiValueMap<String, String> requestParams,
+        @RequestHeader("host") String host,
         HttpServletRequest httpRequest) throws TokenRequestValidationException, JOSEException {
         // 使用http basic来验证client，通过AuthorizationServerSecurityConfiguration实现
         // 验证grant type
@@ -90,17 +90,19 @@ public class TokenEndpoint {
                 // 颁发token时，redirect uri 必须和请求的redirect uri一致
                 && StringUtils.equals(redirectUri, auth.getRequest().getRedirectUri()))
             .orElseThrow(() -> new TokenRequestValidationException("invalid_grant"));
-        OidcAuthorizationRequest request = authentication.getRequest();
+        OidcAuthorizationRequest storedRequest = authentication.getRequest();
         // 根据请求进行pkce校验
-        validPkce(request.getAdditionalParameters(), requestParams);
+        validPkce(storedRequest.getParameters(), requestParams);
         // 签发token
         OAuth2ServerAccessToken accessToken = tokenService.createAccessToken(authentication);
         Map<String, Object> response = accessTokenConverter.toAccessTokenResponse(accessToken);
-        if (request.getScopes().contains(OidcScopes.OPENID)) {
+        if (storedRequest.getScopes().contains(OidcScopes.OPENID)) {
+
+            // TODO 这里其实有待商榷
             String scheme = httpRequest.getScheme();
-            String host = httpRequest.getHeader("host");
-            String baseUrl = scheme + "://" + host + "/oauth2";
-            response.put("id_token", idTokenGenerator.generate(baseUrl, authentication.getUser(), accessToken, request, jwkSet.getKeyByKeyId("default-sign")));
+            String issuer = StringUtils.join(scheme, "://", host, "/oauth2");
+            // TODO　这里待处理
+            response.put("id_token", idTokenGenerator.generate(issuer, (OidcUserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwkSet.getKeyByKeyId("default-sign")));
         }
         return response;
     }

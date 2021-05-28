@@ -1,6 +1,5 @@
 package org.xyyh.oidc.endpoint;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
@@ -20,13 +19,6 @@ import java.util.Map;
  */
 @RequestMapping("/oauth2/.well-known")
 public class ServerDiscoveryEndpoint {
-
-    private final ObjectMapper objectMapper;
-
-
-    public ServerDiscoveryEndpoint(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     /**
      * @see <a href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig">openid-connect-discovery</a>
