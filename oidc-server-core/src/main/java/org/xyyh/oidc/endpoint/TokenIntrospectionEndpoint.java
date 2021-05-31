@@ -41,10 +41,9 @@ public class TokenIntrospectionEndpoint {
      * <p>
      * 如果请求类型是
      *
-     * @param token
-     * @return
-     * @see <a href=
-     * "https://tools.ietf.org/html/rfc7662">OAuth 2.0 Token Introspection</a>
+     * @param token         要校验的token
+     * @param tokenTypeHint token的类型，可选值有 access_token 和  refresh_token
+     * @see <a href="https://tools.ietf.org/html/rfc7662">OAuth 2.0 Token Introspection</a>
      */
     @PostMapping(consumes = {"application/x-www-form-urlencoded"})
     @ResponseBody
@@ -58,12 +57,10 @@ public class TokenIntrospectionEndpoint {
             case "refresh_token":
                 return tokenIntrospectionService.inspectRefreshToken(token).orElse(notExistResponse);
             default:
-
         }
         // TODO 这里待处理,不正确的参数应该响应为400
         return null;
     }
-
 
     /**
      * 如果请求的accept是application/jwt,返回jwt

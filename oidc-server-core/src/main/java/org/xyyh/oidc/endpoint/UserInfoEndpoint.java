@@ -22,6 +22,8 @@ import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.*
 @RequestMapping("/oauth2/userinfo")
 public class UserInfoEndpoint {
 
+    private static final String USER_ROLE = "roles";
+
     /**
      * 获取用户信息
      *
@@ -29,7 +31,7 @@ public class UserInfoEndpoint {
      * @see <a href="https://openid.net/specs/openid-connect-core-1_0.html#UserInfo">https://openid.net/specs/openid-connect-core-1_0.html#UserInfo</a>
      */
     @GetMapping
-    public Object getUserInfo(OidcAuthentication authentication) {
+    public Map<String, ?> getUserInfo(OidcAuthentication authentication) {
         Set<String> scopes = authentication.getScopes();
         OidcUserDetails user = (OidcUserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal();
         Map<String, Object> result = new HashMap<>();
@@ -42,7 +44,7 @@ public class UserInfoEndpoint {
                 PROFILE, PICTURE, WEBSITE, GENDER, BIRTHDATE,
                 ZONEINFO, LOCALE, UPDATED_AT
             );
-            result.put("roles", user.getAuthorities());
+            result.put(USER_ROLE, user.getAuthorities());
         }
         if (scopes.contains(OidcScopes.EMAIL)) {
             copyValueByKey(claims, result, EMAIL, EMAIL_VERIFIED);

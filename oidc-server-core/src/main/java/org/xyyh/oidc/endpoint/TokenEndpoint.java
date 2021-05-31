@@ -4,9 +4,9 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -102,6 +102,7 @@ public class TokenEndpoint {
             String scheme = httpRequest.getScheme();
             String issuer = StringUtils.join(scheme, "://", host, "/oauth2");
             // TODO　这里待处理
+//            OidcIdToken.withTokenValue()
             response.put("id_token", idTokenGenerator.generate(issuer, (OidcUserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwkSet.getKeyByKeyId("default-sign")));
         }
         return response;
@@ -158,11 +159,14 @@ public class TokenEndpoint {
      * @param ex 异常信息
      * @return 异常响应
      */
+    @ResponseBody
     @ExceptionHandler({TokenRequestValidationException.class})
-    public ResponseEntity<Map<String, ?>> handleException(Exception ex) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, ?> handleException(Exception ex) {
         Map<String, Object> response = Maps.hashMap();
         response.put("error", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        return response;
+//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     /**

@@ -19,7 +19,7 @@ import java.util.*;
 
 import static org.xyyh.oidc.collect.Sets.hashSet;
 
-public class DefaultTokenService implements OAuth2AuthorizationServerTokenService, OAuth2ResourceServerTokenService {
+public class DefaultTokenService implements OAuth2AuthorizationServerTokenService {
 
     private Integer defaultAccessTokenValiditySeconds = 3600;
     private Integer defaultRefreshTokenValiditySeconds = 7200;

@@ -135,7 +135,7 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean({OAuth2AuthorizationServerTokenService.class, OAuth2ResourceServerTokenService.class})
+    @ConditionalOnMissingBean({OAuth2AuthorizationServerTokenService.class})
     public DefaultTokenService tokenService(OAuth2AccessTokenStore tokenStorageService) {
         return new DefaultTokenService(tokenStorageService);
     }

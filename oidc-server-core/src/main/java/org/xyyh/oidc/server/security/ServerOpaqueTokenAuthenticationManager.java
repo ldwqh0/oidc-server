@@ -4,16 +4,16 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.server.resource.BearerTokenAuthenticationToken;
-import org.xyyh.oidc.core.OAuth2ResourceServerTokenService;
+import org.xyyh.oidc.core.OAuth2AuthorizationServerTokenService;
 import org.xyyh.oidc.core.OidcAuthentication;
 
 import java.util.Optional;
 
 public class ServerOpaqueTokenAuthenticationManager implements AuthenticationManager {
 
-    private final OAuth2ResourceServerTokenService tokenService;
+    private final OAuth2AuthorizationServerTokenService tokenService;
 
-    public ServerOpaqueTokenAuthenticationManager(OAuth2ResourceServerTokenService tokenService) {
+    public ServerOpaqueTokenAuthenticationManager(OAuth2AuthorizationServerTokenService tokenService) {
         this.tokenService = tokenService;
     }
 
