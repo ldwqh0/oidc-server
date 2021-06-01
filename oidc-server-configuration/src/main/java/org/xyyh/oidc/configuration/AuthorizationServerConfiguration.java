@@ -70,8 +70,14 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
-    public UserInfoEndpoint userInfoEndpoint() {
-        return new UserInfoEndpoint();
+    public UserInfoEndpoint userInfoEndpoint(OidcUserInfoService userClaimsService) {
+        return new UserInfoEndpoint(userClaimsService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(OidcUserInfoService.class)
+    public OidcUserInfoService userClaimsService() {
+        return new UserdetailsToOidcUserInfoService();
     }
 
     /**
@@ -154,7 +160,7 @@ public class AuthorizationServerConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(IdTokenGenerator.class)
-    public IdTokenGenerator idTokenGenerator() {
-        return new DefaultIdTokenGenerator();
+    public IdTokenGenerator idTokenGenerator(OidcUserInfoService userInfoService) {
+        return new DefaultIdTokenGenerator(userInfoService);
     }
 }

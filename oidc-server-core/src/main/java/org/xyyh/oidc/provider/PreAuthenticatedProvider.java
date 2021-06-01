@@ -4,17 +4,17 @@ import org.springframework.security.authentication.AccountStatusUserDetailsCheck
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
-import org.xyyh.oidc.userdetails.OidcUserDetailsService;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 public class PreAuthenticatedProvider implements AuthenticationProvider {
 
-    private final OidcUserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
 
     private final UserDetailsChecker userChecker = new AccountStatusUserDetailsChecker();
 
-    public PreAuthenticatedProvider(OidcUserDetailsService userDetailsService) {
+    public PreAuthenticatedProvider(UserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
 
@@ -24,7 +24,7 @@ public class PreAuthenticatedProvider implements AuthenticationProvider {
             return null;
         }
         String username = authentication.getName();
-        OidcUserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         userChecker.check(userDetails);
         PreAuthenticatedAuthenticationToken result = new PreAuthenticatedAuthenticationToken(userDetails, userDetails.getAuthorities());
         result.setAuthenticated(true);

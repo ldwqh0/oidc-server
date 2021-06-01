@@ -9,11 +9,12 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.xyyh.oidc.core.IdTokenGenerator;
 import org.xyyh.oidc.core.OAuth2ServerAccessToken;
+import org.xyyh.oidc.core.OidcUserInfoService;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import java.util.Date;
 import java.util.Map;
@@ -32,10 +33,16 @@ import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.*
 public class DefaultIdTokenGenerator implements IdTokenGenerator {
     private final Logger log = LoggerFactory.getLogger(DefaultIdTokenGenerator.class);
 
+    private final OidcUserInfoService userInfoService;
+
+    public DefaultIdTokenGenerator(OidcUserInfoService userInfoService) {
+        this.userInfoService = userInfoService;
+    }
+
     @Override
-    public String generate(String issuer, OidcUserDetails user, OAuth2ServerAccessToken accessToken, OidcAuthorizationRequest request, JWK jwk) throws JOSEException {
+    public String generate(String issuer, UserDetails user, OAuth2ServerAccessToken accessToken, OidcAuthorizationRequest request, JWK jwk) throws JOSEException {
         Set<String> scope = accessToken.getScopes();
-        Map<String, Object> claims = user.getClaims();
+        Map<String, Object> claims = userInfoService.loadOidcUserInfo(user).getClaims();
         Algorithm algorithm = jwk.getAlgorithm();
         if (Objects.isNull(algorithm) || !JWSAlgorithm.class.isAssignableFrom(algorithm.getClass())) {
             algorithm = JWSAlgorithm.RS256;
@@ -43,7 +50,6 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         JWSHeader header = new JWSHeader.Builder((JWSAlgorithm) algorithm).type(JOSEObjectType.JWT).build();
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
             .issuer(issuer) // 发行人
-            .subject(user.getSubject())
             .audience(request.getClientId()) // 接收人
             // 过期时间和access token时间一致
             .expirationTime(new Date(accessToken.getExpiresAt().toEpochMilli()))
@@ -58,10 +64,10 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         if (StringUtils.isNotBlank(nonce)) {
             claimsBuilder.claim(NONCE, nonce);
         }
+        copyClaims(claimsBuilder, claims, SUB);
         if (scope.contains(OidcScopes.PROFILE)) {
-            claimsBuilder.claim(NAME, user.getUsername());
             copyClaims(claimsBuilder, claims,
-                GIVEN_NAME, GIVEN_NAME, FAMILY_NAME, MIDDLE_NAME, NICKNAME, PREFERRED_USERNAME,
+                NAME, GIVEN_NAME, GIVEN_NAME, FAMILY_NAME, MIDDLE_NAME, NICKNAME, PREFERRED_USERNAME,
                 PROFILE, PICTURE, WEBSITE, GENDER, BIRTHDATE,
                 ZONEINFO, LOCALE, UPDATED_AT
             );
@@ -75,6 +81,7 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         if (scope.contains(OidcScopes.PHONE)) {
             copyClaims(claimsBuilder, claims, PHONE_NUMBER, PHONE_NUMBER_VERIFIED);
         }
+        JWTClaimsSet claimsSet = claimsBuilder.build();
         SignedJWT jwt = new SignedJWT(header, claimsBuilder.build());
         try {
             JWSSigner signer = new RSASSASigner(jwk.toRSAKey());

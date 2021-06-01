@@ -3,6 +3,7 @@ package org.xyyh.oidc.provider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -11,7 +12,6 @@ import org.xyyh.oidc.client.ClientDetails;
 import org.xyyh.oidc.collect.CollectionUtils;
 import org.xyyh.oidc.core.*;
 import org.xyyh.oidc.exception.RefreshTokenValidationException;
-import org.xyyh.oidc.userdetails.OidcUserDetailsService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -35,7 +35,7 @@ public class DefaultTokenService implements OAuth2AuthorizationServerTokenServic
     private ProviderManager preProviderManager;
 
     @Autowired(required = false)
-    public void setUserDetailsService(OidcUserDetailsService userDetailsService) {
+    public void setUserDetailsService(UserDetailsService userDetailsService) {
         if (userDetailsService != null) {
             this.preProviderManager = new ProviderManager(Collections.singletonList(new PreAuthenticatedProvider(userDetailsService)));
         }

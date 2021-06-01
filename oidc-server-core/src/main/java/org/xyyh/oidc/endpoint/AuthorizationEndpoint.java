@@ -4,6 +4,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
@@ -22,7 +23,6 @@ import org.xyyh.oidc.core.*;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationResponseType;
 import org.xyyh.oidc.exception.*;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import java.time.Instant;
 import java.util.*;
@@ -83,7 +83,7 @@ public class AuthorizationEndpoint {
         @RequestParam(OAuth2ParameterNames.CLIENT_ID) List<String> clientIds,
         @RequestParam(value = OAuth2ParameterNames.REDIRECT_URI, required = false) List<String> redirectUris,
         @RequestParam MultiValueMap<String, String> params,
-        @AuthenticationPrincipal OidcUserDetails user) throws UnauthorizedClientException, InvalidRedirectUriException, InvalidRequestParameterException {
+        @AuthenticationPrincipal UserDetails user) throws UnauthorizedClientException, InvalidRedirectUriException, InvalidRequestParameterException {
         /*
          * If the request fails due to a missing, invalid, or mismatching redirect URI,
          * or if the client identifier is missing or invalid,
@@ -198,7 +198,7 @@ public class AuthorizationEndpoint {
         @SessionAttribute(OAUTH2_AUTHORIZATION_CLIENT) ClientDetails client,
         @SessionAttribute(OAUTH2_AUTHORIZATION_REQUEST) OidcAuthorizationRequest authorizationRequest,
         Authentication userAuthentication,
-        @AuthenticationPrincipal OidcUserDetails user,
+        @AuthenticationPrincipal UserDetails user,
         SessionStatus sessionStatus) throws AccessDeniedException {
         // 当提交用户授权信息之后，将session标记为完成
         sessionStatus.setComplete();

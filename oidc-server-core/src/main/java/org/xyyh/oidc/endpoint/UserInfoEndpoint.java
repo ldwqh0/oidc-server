@@ -1,12 +1,13 @@
 package org.xyyh.oidc.endpoint;
 
 import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.xyyh.oidc.core.OidcAuthentication;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
+import org.xyyh.oidc.core.OidcUserInfoService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +25,12 @@ public class UserInfoEndpoint {
 
     private static final String USER_ROLE = "roles";
 
+    private final OidcUserInfoService userClaimsService;
+
+    public UserInfoEndpoint(OidcUserInfoService userClaimsService) {
+        this.userClaimsService = userClaimsService;
+    }
+
     /**
      * 获取用户信息
      *
@@ -33,27 +40,26 @@ public class UserInfoEndpoint {
     @GetMapping
     public Map<String, ?> getUserInfo(OidcAuthentication authentication) {
         Set<String> scopes = authentication.getScopes();
-        OidcUserDetails user = (OidcUserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal();
+        UserDetails user = (UserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal();
         Map<String, Object> result = new HashMap<>();
-        result.put(SUB, user.getSubject());
-        Map<String, Object> claims = user.getClaims();
+        Map<String, Object> userClaims = userClaimsService.loadOidcUserInfo(user).getClaims();
+        copyValueByKey(userClaims, result, SUB);
         if (scopes.contains(OidcScopes.PROFILE)) {
-            result.put(NAME, user.getUsername());
-            copyValueByKey(claims, result,
-                GIVEN_NAME, FAMILY_NAME, MIDDLE_NAME, NICKNAME, PREFERRED_USERNAME,
+            copyValueByKey(userClaims, result,
+                NAME, GIVEN_NAME, FAMILY_NAME, MIDDLE_NAME, NICKNAME, PREFERRED_USERNAME,
                 PROFILE, PICTURE, WEBSITE, GENDER, BIRTHDATE,
                 ZONEINFO, LOCALE, UPDATED_AT
             );
             result.put(USER_ROLE, user.getAuthorities());
         }
         if (scopes.contains(OidcScopes.EMAIL)) {
-            copyValueByKey(claims, result, EMAIL, EMAIL_VERIFIED);
+            copyValueByKey(userClaims, result, EMAIL, EMAIL_VERIFIED);
         }
         if (scopes.contains(OidcScopes.ADDRESS)) {
-            copyValueByKey(claims, result, ADDRESS);
+            copyValueByKey(userClaims, result, ADDRESS);
         }
         if (scopes.contains(OidcScopes.PHONE)) {
-            copyValueByKey(claims, result, PHONE_NUMBER, PHONE_NUMBER_VERIFIED);
+            copyValueByKey(userClaims, result, PHONE_NUMBER, PHONE_NUMBER_VERIFIED);
         }
         return result;
     }

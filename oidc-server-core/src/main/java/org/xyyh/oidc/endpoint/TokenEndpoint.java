@@ -5,8 +5,8 @@ import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +17,6 @@ import org.xyyh.oidc.endpoint.converter.AccessTokenConverter;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.exception.RefreshTokenValidationException;
 import org.xyyh.oidc.exception.TokenRequestValidationException;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
@@ -97,13 +96,11 @@ public class TokenEndpoint {
         OAuth2ServerAccessToken accessToken = tokenService.createAccessToken(authentication);
         Map<String, Object> response = accessTokenConverter.toAccessTokenResponse(accessToken);
         if (storedRequest.getScopes().contains(OidcScopes.OPENID)) {
-
             // TODO 这里其实有待商榷
             String scheme = httpRequest.getScheme();
             String issuer = StringUtils.join(scheme, "://", host, "/oauth2");
-            // TODO　这里待处理
-//            OidcIdToken.withTokenValue()
-            response.put("id_token", idTokenGenerator.generate(issuer, (OidcUserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwkSet.getKeyByKeyId("default-sign")));
+            String token = idTokenGenerator.generate(issuer, (UserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwkSet.getKeyByKeyId("default-sign"));
+            response.put("id_token", token);
         }
         return response;
     }

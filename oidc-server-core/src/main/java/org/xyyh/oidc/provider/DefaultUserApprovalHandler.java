@@ -1,10 +1,10 @@
 package org.xyyh.oidc.provider;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.xyyh.oidc.core.ApprovalResult;
 import org.xyyh.oidc.core.UserApprovalHandler;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
-import org.xyyh.oidc.userdetails.OidcUserDetails;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -19,13 +19,13 @@ public class DefaultUserApprovalHandler implements UserApprovalHandler {
 
 
     @Override
-    public ApprovalResult preCheck(OidcAuthorizationRequest request, OidcUserDetails user) {
+    public ApprovalResult preCheck(OidcAuthorizationRequest request, UserDetails user) {
         // 返回一个默认结果，默认结果为未授权
         return ApprovalResult.empty();
     }
 
     @Override
-    public ApprovalResult approval(OidcAuthorizationRequest request, OidcUserDetails user, Map<String, String> approvalParameters) {
+    public ApprovalResult approval(OidcAuthorizationRequest request, UserDetails user, Map<String, String> approvalParameters) {
         Set<String> requestScopes = request.getScopes();
         Set<String> approvedScopes = new HashSet<>(); // 授权允许的scope
         for (String requestScope : requestScopes) {
@@ -39,7 +39,7 @@ public class DefaultUserApprovalHandler implements UserApprovalHandler {
     }
 
     @Override
-    public void updateAfterApproval(OidcAuthorizationRequest request, OidcUserDetails user, ApprovalResult result) {
+    public void updateAfterApproval(OidcAuthorizationRequest request, UserDetails user, ApprovalResult result) {
 
     }
 }
