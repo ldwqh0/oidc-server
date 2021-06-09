@@ -1,6 +1,7 @@
 package org.xyyh.oidc.endpoint.converter;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.server.resource.introspection.OAuth2IntrospectionClaimNames;
@@ -72,7 +73,9 @@ public class DefaultAccessTokenConverter implements AccessTokenConverter {
         // TODO 签发者
         // iss是一个url
         // r.put("iss", "oauth2server");
-        if (principal instanceof UserDetails) {
+        if (principal instanceof Authentication) {
+            response.put(OAuth2IntrospectionClaimNames.SUBJECT, ((Authentication) principal).getName());
+        } else if (principal instanceof UserDetails) {
             response.put(OAuth2IntrospectionClaimNames.SUBJECT, ((UserDetails) principal).getUsername());
         }
         response.put(OAuth2IntrospectionClaimNames.JTI, token.getId());

@@ -55,6 +55,7 @@ public class UserInfoEndpoint {
         if (scopes.contains(OidcScopes.EMAIL)) {
             copyValueByKey(userClaims, result, EMAIL, EMAIL_VERIFIED);
         }
+        // TODO 地址是个嵌套结构，需要单独处理一下
         if (scopes.contains(OidcScopes.ADDRESS)) {
             copyValueByKey(userClaims, result, ADDRESS);
         }
