@@ -1,6 +1,5 @@
 package org.xyyh.oidc.client;
 
-import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
@@ -11,7 +10,7 @@ import java.util.Set;
 import static org.xyyh.oidc.collect.Sets.hashSet;
 import static org.xyyh.oidc.collect.Sets.transform;
 
-public class BaseClientDetails implements CredentialsContainer, ClientDetails {
+public class BaseClientDetails implements ClientDetails {
 
     private static final long serialVersionUID = -7386163121370242465L;
 
@@ -152,11 +151,6 @@ public class BaseClientDetails implements CredentialsContainer, ClientDetails {
     @Override
     public Set<AuthorizationGrantType> getAuthorizedGrantTypes() {
         return this.authorizedGrantTypes;
-    }
-
-    @Override
-    public void eraseCredentials() {
-        this.clientSecret = null;
     }
 
     @Override

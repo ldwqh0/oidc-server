@@ -128,13 +128,12 @@ class DefaultOidcAuthenticationToken implements OidcAuthentication {
 
     @Override
     public Object getPrincipal() {
-        return Objects.isNull(this.user) ? this.client : this.user;
+        return Objects.isNull(this.user) ? this.client : this.user.getPrincipal();
     }
 
     @Override
     public String getName() {
-        return Objects.isNull(this.user) ? this.request.getClientId()
-            : this.user.getName();
+        return Objects.isNull(this.user) ? this.request.getClientId() : this.user.getName();
     }
 
     @Override

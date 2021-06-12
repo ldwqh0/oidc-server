@@ -11,7 +11,6 @@ import org.xyyh.oidc.core.OidcUserInfoService;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.*;
@@ -40,7 +39,7 @@ public class UserInfoEndpoint {
     @GetMapping
     public Map<String, ?> getUserInfo(OidcAuthentication authentication) {
         Set<String> scopes = authentication.getScopes();
-        UserDetails user = (UserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal();
+        UserDetails user = (UserDetails) authentication.getPrincipal();
         Map<String, Object> result = new HashMap<>();
         Map<String, Object> userClaims = userClaimsService.loadOidcUserInfo(user).getClaims();
         copyValueByKey(userClaims, result, SUB);
