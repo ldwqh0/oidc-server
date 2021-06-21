@@ -39,7 +39,6 @@ public class ResourceServerSecurityConfiguration extends WebSecurityConfigurerAd
             .authorizeRequests().anyRequest().fullyAuthenticated();
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         http.oauth2ResourceServer()
-            .bearerTokenResolver(bearerTokenResolver())
             .opaqueToken()
             .authenticationManager(new ServerOpaqueTokenAuthenticationManager(tokenService));
         http.requestMatcher(new BearerTokenRequestMatcher(bearerTokenResolver()));

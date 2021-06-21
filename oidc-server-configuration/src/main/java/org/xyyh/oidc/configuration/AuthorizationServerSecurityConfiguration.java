@@ -38,7 +38,7 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
         // 使用NullSecurityContextRepository,防止将相关的安全信息写入Session或者其它地方
         // 否则在同一浏览器环境下测试，会造成client的安全上下文和user的安全上下文混乱
         http.securityContext().securityContextRepository(new NullSecurityContextRepository());
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.NEVER);
+        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         http.csrf().disable();
     }
 

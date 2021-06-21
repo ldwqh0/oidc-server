@@ -11,9 +11,9 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Import({
-    AuthorizationServerSecurityConfiguration.class,
     AuthorizationServerConfiguration.class,
-    ResourceServerSecurityConfiguration.class
+    ResourceServerSecurityConfiguration.class,
+    AuthorizationServerSecurityConfiguration.class
 })
 public @interface EnableAuthorizationServer {
 
