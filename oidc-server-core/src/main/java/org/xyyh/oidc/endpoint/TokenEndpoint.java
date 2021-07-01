@@ -4,22 +4,27 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.xyyh.oidc.client.ClientDetails;
+import org.xyyh.oidc.client.ClientDetails.ClientType;
+import org.xyyh.oidc.client.ClientDetailsService;
 import org.xyyh.oidc.collect.Maps;
 import org.xyyh.oidc.core.*;
 import org.xyyh.oidc.endpoint.converter.AccessTokenConverter;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
+import org.xyyh.oidc.exception.ClientUnauthorizedException;
 import org.xyyh.oidc.exception.RefreshTokenValidationException;
 import org.xyyh.oidc.exception.TokenRequestValidationException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.xyyh.oidc.core.PkceValidator.CODE_CHALLENGE_METHOD_PLAIN;
@@ -45,42 +50,56 @@ public class TokenEndpoint {
 
     private final JWKSet jwkSet;
 
+    private final ClientDetailsService clientDetailsService;
+
+    public static final String AUTHENTICATION_SCHEME_BASIC = "Basic";
+
     public TokenEndpoint(OAuth2AuthorizationCodeStore authorizationCodeService,
                          OAuth2AuthorizationServerTokenService tokenService,
                          AccessTokenConverter accessTokenConverter,
                          PkceValidator pkceValidator,
                          IdTokenGenerator idTokenGenerator,
-                         JWKSet jwkSet) {
+                         JWKSet jwkSet, ClientDetailsService clientDetailsService) {
         this.authorizationCodeService = authorizationCodeService;
         this.tokenService = tokenService;
         this.accessTokenConverter = accessTokenConverter;
         this.pkceValidator = pkceValidator;
         this.idTokenGenerator = idTokenGenerator;
         this.jwkSet = jwkSet;
+        this.clientDetailsService = clientDetailsService;
     }
 
     /**
-     * @param client        连接信息
-     * @param code          授权码
-     * @param redirectUri   重定向uri
-     * @param requestParams 请求参数
-     * @param httpRequest   http请求信息
+     * @param code        授权码
+     * @param redirectUri 重定向uri
+     * @param httpRequest http请求信息
      * @throws TokenRequestValidationException 如果校验失败，抛出该异常
      * @throws JOSEException                   生成 id-token错误时，引发该异常
      * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.1">https://tools.ietf.org/html/rfc6749#section-4.1</a>
      */
-    @PostMapping(params = {"code", "grant_type=authorization_code"})
     @ResponseBody
+    @PostMapping(params = {"code", "grant_type=authorization_code"})
     public Map<String, Object> postAccessToken(
-        @AuthenticationPrincipal ClientDetails client,
         @RequestParam("code") String code,
         @RequestParam("redirect_uri") String redirectUri,
-        @RequestParam MultiValueMap<String, String> requestParams,
         @RequestHeader("host") String host,
-        HttpServletRequest httpRequest) throws TokenRequestValidationException, JOSEException {
-        // 使用http basic来验证client，通过AuthorizationServerSecurityConfiguration实现
+        @RequestParam(value = "client_id") String clientId,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestParam(value = "code_verifier", required = false) String codeVerifier,
+        @RequestParam(value = "code_challenge_method", required = false, defaultValue = CODE_CHALLENGE_METHOD_PLAIN) String code_challenge_method,
+        HttpServletRequest httpRequest) throws TokenRequestValidationException, JOSEException, ClientUnauthorizedException {
+        final ClientDetails client = clientDetailsService.loadClientByClientId(clientId);
+        if (Objects.isNull(client)) {
+            // TODO 异常类型待确定
+            throw new TokenRequestValidationException("invalid_client");
+        }
+        if (!ClientType.CLIENT_PUBLIC.equals(client.getType())) {
+            validateClientAuthentication(clientId, authorizationHeader);
+        }
+
         // 验证grant type
         validGrantTypes(client, AuthorizationGrantType.AUTHORIZATION_CODE);
+
         // 验证code
         // 首先验证code是否存在,没有找到指定的授权码信息时报错
         OidcAuthentication authentication = authorizationCodeService.consume(code)
@@ -90,8 +109,13 @@ public class TokenEndpoint {
                 && StringUtils.equals(redirectUri, auth.getRequest().getRedirectUri()))
             .orElseThrow(() -> new TokenRequestValidationException("invalid_grant"));
         OidcAuthorizationRequest storedRequest = authentication.getRequest();
-        // 根据请求进行pkce校验
-        validPkce(storedRequest.getParameters(), requestParams);
+        Map<String, String> storeParams = storedRequest.getParameters();
+        // 如果是public应用，需要验证pkce
+        if (ClientType.CLIENT_PUBLIC.equals(client.getType())) {
+            String codeChallenge = storeParams.get("code_challenge");
+            pkceValidator.validate(codeChallenge, codeVerifier, code_challenge_method);
+        }
+
         // 签发token
         OAuth2ServerAccessToken accessToken = tokenService.createAccessToken(authentication);
         Map<String, Object> response = accessTokenConverter.toAccessTokenResponse(accessToken);
@@ -105,7 +129,6 @@ public class TokenEndpoint {
         return response;
     }
 
-
     /**
      * 刷新token
      *
@@ -116,13 +139,22 @@ public class TokenEndpoint {
     @PostMapping(params = {"grant_type=refresh_token"})
     @ResponseBody
     public Map<String, Object> refreshToken(
-        @AuthenticationPrincipal ClientDetails client,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @RequestParam("refresh_token") String refreshToken,
         @RequestParam(value = "scope", required = false) String scope
-    ) throws TokenRequestValidationException {
+    ) throws TokenRequestValidationException, ClientUnauthorizedException {
         Set<String> requestScopes = new HashSet<>(Arrays.asList(StringUtils.split(scope)));
         // 对token进行预检，如果检测失败，抛出异常
         try {
+            // 获取这个refresh token已经存在的client
+            ClientDetails client = tokenService.loadAuthenticationByRefreshToken(refreshToken)
+                .map(OidcAuthentication::getClient)
+                // token已经过期了
+                .orElseThrow(() -> new TokenRequestValidationException("invalid_request"));
+            // 如果client type不是公共的，需要验证client的密码
+            if (!ClientType.CLIENT_PUBLIC.equals(client.getType())) {
+                client = validateClientAuthentication(client.getClientId(), authorizationHeader);
+            }
             OAuth2ServerAccessToken accessToken = tokenService.refreshAccessToken(refreshToken, client, requestScopes);
             return accessTokenConverter.toAccessTokenResponse(accessToken);
         } catch (RefreshTokenValidationException ex) {
@@ -163,32 +195,72 @@ public class TokenEndpoint {
         Map<String, Object> response = Maps.hashMap();
         response.put("error", ex.getMessage());
         return response;
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     /**
-     * 对请求进行pkce校验
-     *
-     * @param storeParams 储存的pkce参数
-     * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7636">Proof Key for Code Exchange by OAuth Public Clients</a>
+     * 如果客户端认证不通过，抛出该异常
      */
-    private void validPkce(Map<String, String> storeParams, MultiValueMap<String, String> requestParams) throws TokenRequestValidationException {
-        String codeChallenge = storeParams.get("code_challenge");
-        if (StringUtils.isNotBlank(codeChallenge)) {
-            String codeChallengeMethod = storeParams.get("code_challenge_method");// storeParams.getOrDefault("code_challenge_method", CODE_CHALLENGE_METHOD_PLAIN);
-            if (StringUtils.isBlank(codeChallengeMethod)) {
-                codeChallengeMethod = CODE_CHALLENGE_METHOD_PLAIN;
-            }
-            String codeVerifier = requestParams.getFirst("code_verifier");
-            pkceValidator.validate(codeChallenge, codeVerifier, codeChallengeMethod);
-        }
+    @ResponseBody
+    @ExceptionHandler({ClientUnauthorizedException.class})
+    public ResponseEntity<Void> handleClientUnauthorized(ClientUnauthorizedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .header("WWW-Authenticate", "Realm").build();
     }
-
 
     private void validGrantTypes(ClientDetails client, @NotNull AuthorizationGrantType grantType) throws TokenRequestValidationException {
         Set<AuthorizationGrantType> grantTypes = client.getAuthorizedGrantTypes();
         if (!grantTypes.contains(grantType)) {
             throw new TokenRequestValidationException("unsupported_grant_type");
+        }
+    }
+
+    private ClientDetails validateClientAuthentication(String clientId, String header) throws ClientUnauthorizedException {
+        // 如果不是 public client,需要验证Client security
+        UsernamePasswordAuthenticationToken clientToken;
+        try {
+            clientToken = converterAuthenticationHeader(header);
+        } catch (Exception e) {
+            throw new ClientUnauthorizedException("invalid_client");
+        }
+        if (Objects.isNull(clientToken)) {
+            throw new ClientUnauthorizedException("invalid_client");
+        }
+        if (!Objects.equals(clientId, clientToken.getName())) {
+            throw new ClientUnauthorizedException("invalid_client");
+        }
+
+        // 两次
+        ClientDetails client = clientDetailsService.loadClientByClientId(clientId);
+        if (!Objects.equals(client.getPassword(), clientToken.getCredentials())) {
+            // 需要返回401
+            throw new ClientUnauthorizedException("invalid_client");
+        }
+        return client;
+    }
+
+    private UsernamePasswordAuthenticationToken converterAuthenticationHeader(String header) {
+        header = header.trim();
+        if (!org.springframework.util.StringUtils.startsWithIgnoreCase(header, AUTHENTICATION_SCHEME_BASIC)) {
+            return null;
+        }
+        if (header.equalsIgnoreCase(AUTHENTICATION_SCHEME_BASIC)) {
+            throw new BadCredentialsException("Empty basic authentication token");
+        }
+        byte[] base64Token = header.substring(6).getBytes(StandardCharsets.UTF_8);
+        byte[] decoded = decode(base64Token);
+        String token = new String(decoded, StandardCharsets.UTF_8);
+        int delim = token.indexOf(":");
+        if (delim == -1) {
+            throw new BadCredentialsException("Invalid basic authentication token");
+        }
+        return new UsernamePasswordAuthenticationToken(token.substring(0, delim), token.substring(delim + 1));
+    }
+
+    private byte[] decode(byte[] base64Token) {
+        try {
+            return Base64.getDecoder().decode(base64Token);
+        } catch (IllegalArgumentException ex) {
+            throw new BadCredentialsException("Failed to decode basic authentication token");
         }
     }
 }

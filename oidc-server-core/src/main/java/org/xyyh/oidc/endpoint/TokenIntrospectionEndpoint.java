@@ -36,7 +36,7 @@ public class TokenIntrospectionEndpoint {
     /**
      * 这个接口仅对资源服务器开放，不应该被外部服务器，或者client访问到
      * <p>
-     * Content-Type: application/json for a regular response,
+     * Content-ClientType: application/json for a regular response,
      * application/token-introspection+jwt for a JWT-secured response.<br>
      * <p>
      * 如果请求类型是

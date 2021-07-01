@@ -1,65 +1,82 @@
 package org.xyyh.oidc.configuration;
 
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.context.NullSecurityContextRepository;
-import org.xyyh.oidc.client.ClientDetailsService;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.xyyh.oidc.core.OAuth2AuthorizationServerTokenService;
+import org.xyyh.oidc.server.security.ServerOpaqueTokenAuthenticationManager;
+
+import javax.servlet.http.HttpServletRequest;
 
 @Order(99)
 @EnableWebSecurity
 public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-    private final ClientDetailsService clientDetailsService;
+    private final OAuth2AuthorizationServerTokenService tokenService;
 
-    public AuthorizationServerSecurityConfiguration(ClientDetailsService clientDetailsService) {
-        this.clientDetailsService = clientDetailsService;
+    public AuthorizationServerSecurityConfiguration(OAuth2AuthorizationServerTokenService tokenService) {
+        this.tokenService = tokenService;
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.requestMatchers().antMatchers(
-            "/oauth2/token",
-            "/oauth2/certs",
-            "/oauth2/token/introspection",
-            "/oauth2/.well-known/openid-configuration");
-        http.authorizeRequests()
+        // 禁用form登录
+        http.formLogin().disable()
+            .httpBasic().disable()
+            .csrf().disable()
+            .logout().disable()
+            .anonymous().and()
+            .authorizeRequests()
             .antMatchers("/oauth2/certs",
-                "/oauth2/.well-known/openid-configuration")
-            .permitAll()
-            .anyRequest().fullyAuthenticated();
-        // 根据rfc6749,如果客户端验证未通过，应用返回401和WWW-Authenticate header
-        http.formLogin().disable().httpBasic();
-        // 使用NullSecurityContextRepository,防止将相关的安全信息写入Session或者其它地方
-        // 否则在同一浏览器环境下测试，会造成client的安全上下文和user的安全上下文混乱
-        http.securityContext().securityContextRepository(new NullSecurityContextRepository());
+                "/oauth2/token",
+                "/oauth2/.well-known/openid-configuration",
+                "/oauth2/token/introspection"
+            ).permitAll()
+            .anyRequest()
+            .fullyAuthenticated();
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        http.csrf().disable();
+        http.oauth2ResourceServer()
+            .opaqueToken()
+            .authenticationManager(new ServerOpaqueTokenAuthenticationManager(tokenService));
+        http.requestMatcher(new OrRequestMatcher(
+            new AntPathRequestMatcher("/oauth2/token"),
+            new AntPathRequestMatcher("/oauth2/certs"),
+            new AntPathRequestMatcher("/oauth2/token/introspection"),
+            new AntPathRequestMatcher("/oauth2/.well-known/openid-configuration"),
+            new BearerTokenRequestMatcher(bearerTokenResolver())
+        ));
     }
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(clientDetailsService::loadClientByClientId)
-            .passwordEncoder(passwordEncoder());
+    @Bean
+    public BearerTokenResolver bearerTokenResolver() {
+        return new DefaultBearerTokenResolver();
     }
 
-    private PasswordEncoder passwordEncoder() {
-        return new PasswordEncoder() {
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                return StringUtils.equals(rawPassword, encodedPassword);
-            }
+    private final static class BearerTokenRequestMatcher implements RequestMatcher {
 
-            @Override
-            public String encode(CharSequence encodedPassword) {
-                return encodedPassword.toString();
+        private final BearerTokenResolver bearerTokenResolver;
+
+        private BearerTokenRequestMatcher(BearerTokenResolver bearerTokenResolver) {
+            this.bearerTokenResolver = bearerTokenResolver;
+        }
+
+        @Override
+        public boolean matches(HttpServletRequest request) {
+            try {
+                return this.bearerTokenResolver.resolve(request) != null;
+            } catch (OAuth2AuthenticationException ex) {
+                return false;
             }
-        };
+        }
     }
 
 }

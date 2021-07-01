@@ -15,7 +15,7 @@ public class BaseClientDetails implements ClientDetails {
     private static final long serialVersionUID = -7386163121370242465L;
 
     private final String clientId;
-    private String clientSecret;
+    private final String clientSecret;
     private final boolean autoApproval;
     private final Set<String> scopes;
     private final Set<String> registeredRedirectUris;
@@ -24,22 +24,22 @@ public class BaseClientDetails implements ClientDetails {
     private final Integer accessTokenValiditySeconds;
 
     private final Integer refreshTokenValiditySeconds;
-    private final boolean requirePkce;
     private final boolean accountExpired;
     private final boolean accountLocked;
     private final boolean credentialsExpired;
     private final boolean enabled;
+    private final ClientType type;
 
     public BaseClientDetails(
         String clientId,
         String clientSecret,
+        ClientType type,
         boolean autoApproval,
         Set<String> scope,
         Set<String> registeredRedirectUris,
         Set<String> authorizedGrantTypes,
         Integer accessTokenValiditySeconds,
         Integer refreshTokenValiditySeconds,
-        boolean requirePkce,
         boolean accountExpired,
         boolean accountLocked,
         boolean credentialsExpired,
@@ -52,8 +52,7 @@ public class BaseClientDetails implements ClientDetails {
         this.authorizedGrantTypes = transform(authorizedGrantTypes, AuthorizationGrantType::new);
         this.accessTokenValiditySeconds = accessTokenValiditySeconds;
         this.refreshTokenValiditySeconds = refreshTokenValiditySeconds;
-        this.requirePkce = requirePkce;
-
+        this.type = type;
         this.accountExpired = accountExpired;
         this.accountLocked = accountLocked;
         this.credentialsExpired = credentialsExpired;
@@ -95,14 +94,9 @@ public class BaseClientDetails implements ClientDetails {
         return autoApproval;
     }
 
-    public boolean isRequirePkce() {
-        return requirePkce;
-    }
-
     @Override
-    public String getType() {
-        // TODO　客户端类型
-        return "null";
+    public ClientType getType() {
+        return this.type;
     }
 
     @Override

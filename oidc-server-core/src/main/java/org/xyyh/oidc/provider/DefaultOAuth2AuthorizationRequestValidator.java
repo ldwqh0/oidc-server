@@ -3,11 +3,15 @@ package org.xyyh.oidc.provider;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.xyyh.oidc.client.ClientDetails;
+import org.xyyh.oidc.client.ClientDetails.ClientType;
 import org.xyyh.oidc.collect.CollectionUtils;
 import org.xyyh.oidc.core.OAuth2AuthorizationRequestValidator;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationResponseType;
-import org.xyyh.oidc.exception.*;
+import org.xyyh.oidc.exception.InvalidCodeChallengeException;
+import org.xyyh.oidc.exception.InvalidRequestParameterException;
+import org.xyyh.oidc.exception.InvalidRequestScopeException;
+import org.xyyh.oidc.exception.UnsupportedResponseTypeException;
 
 import java.util.Set;
 
@@ -16,16 +20,12 @@ public class DefaultOAuth2AuthorizationRequestValidator implements OAuth2Authori
 
     @Override
     public void validate(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRequestParameterException {
-
         // 验证scope
         validScope(request, client);
-
         // 验证response type
         validResponseType(request, client);
-
         // 验证pkce
         validPkceRequest(request, client);
-
     }
 
     private void validScope(OidcAuthorizationRequest request, ClientDetails client) throws InvalidRequestScopeException {
@@ -79,7 +79,7 @@ public class DefaultOAuth2AuthorizationRequestValidator implements OAuth2Authori
      * @param request 授权请求
      */
     private void validPkceRequest(OidcAuthorizationRequest request, ClientDetails client) throws InvalidCodeChallengeException {
-        if (client.isRequirePkce()) {
+        if (ClientType.CLIENT_PUBLIC.equals(client.getType())) {
             String codeChallenge = request.getParameters().get("code_challenge");
             if (StringUtils.isBlank(codeChallenge)) {
                 throw new InvalidCodeChallengeException(request);

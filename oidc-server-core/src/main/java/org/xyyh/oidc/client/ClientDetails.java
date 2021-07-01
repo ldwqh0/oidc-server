@@ -12,6 +12,12 @@ import java.util.Set;
 
 public interface ClientDetails extends UserDetails, Serializable {
 
+    enum ClientType {
+        CLIENT_PUBLIC,
+        CLIENT_CONFIDENTIAL,
+        RESOURCE
+    }
+
     boolean isAutoApproval();
 
     /**
@@ -47,14 +53,6 @@ public interface ClientDetails extends UserDetails, Serializable {
 
     Set<String> getRegisteredRedirectUris();
 
-    /**
-     * 确定某个client是否需要pkce验证
-     *
-     * @return
-     */
-    boolean isRequirePkce();
-
-
-    String getType();
+    ClientType getType();
 
 }
