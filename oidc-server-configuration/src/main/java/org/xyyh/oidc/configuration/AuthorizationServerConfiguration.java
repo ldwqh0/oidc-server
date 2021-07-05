@@ -9,6 +9,8 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.xyyh.oidc.client.ClientDetailsService;
 import org.xyyh.oidc.client.InMemoryClientDetailsService;
 import org.xyyh.oidc.core.*;
@@ -162,5 +164,10 @@ public class AuthorizationServerConfiguration {
     @ConditionalOnMissingBean(IdTokenGenerator.class)
     public IdTokenGenerator idTokenGenerator(OidcUserInfoService userInfoService) {
         return new DefaultIdTokenGenerator(userInfoService);
+    }
+
+    @Bean
+    public BearerTokenResolver bearerTokenResolver() {
+        return new DefaultBearerTokenResolver();
     }
 }

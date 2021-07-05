@@ -8,8 +8,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.context.NullSecurityContextRepository;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.xyyh.oidc.client.ClientDetailsService;
+import org.xyyh.oidc.server.security.web.authentication.www.PublicClientAuthenticationFilter;
+
+import static org.xyyh.oidc.client.ClientDetails.ClientType.*;
 
 @Order(99)
 @EnableWebSecurity
@@ -28,17 +31,23 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
             "/oauth2/certs",
             "/oauth2/token/introspection",
             "/oauth2/.well-known/openid-configuration");
-        http.authorizeRequests()
-            .antMatchers("/oauth2/certs",
-                "/oauth2/.well-known/openid-configuration")
-            .permitAll()
-            .anyRequest().fullyAuthenticated();
+        http.anonymous();
         // 根据rfc6749,如果客户端验证未通过，应用返回401和WWW-Authenticate header
-        http.formLogin().disable().httpBasic();
-        // 使用NullSecurityContextRepository,防止将相关的安全信息写入Session或者其它地方
+        http.httpBasic().and()
+            .formLogin().disable()
+            .csrf().disable()
+            .logout().disable();
+        http.authorizeRequests()
+            // 发现节点不做验证
+            .antMatchers("/oauth2/certs", "/oauth2/.well-known/openid-configuration").permitAll()
+            // 资源服务器可以访问token introspection节点
+            .antMatchers("/oauth2/token/introspection").hasAnyAuthority("ROLE_" + CLIENT_RESOURCE)
+            // client可以访问token节点
+            .antMatchers("/oauth2/token").hasAnyAuthority("ROLE_" + CLIENT_PUBLIC, "ROLE_" + CLIENT_CONFIDENTIAL)
+            .anyRequest().fullyAuthenticated();
         // 否则在同一浏览器环境下测试，会造成client的安全上下文和user的安全上下文混乱
-        http.securityContext().securityContextRepository(new NullSecurityContextRepository());
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.NEVER);
+        http.addFilterBefore(new PublicClientAuthenticationFilter(clientDetailsService), BasicAuthenticationFilter.class);
+        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         http.csrf().disable();
     }
 

@@ -1,6 +1,5 @@
 package org.xyyh.oidc.configuration;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -8,7 +7,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
-import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.xyyh.oidc.core.OAuth2AuthorizationServerTokenService;
 import org.xyyh.oidc.server.security.ServerOpaqueTokenAuthenticationManager;
@@ -21,8 +19,13 @@ public class ResourceServerSecurityConfiguration extends WebSecurityConfigurerAd
 
     private final OAuth2AuthorizationServerTokenService tokenService;
 
-    public ResourceServerSecurityConfiguration(OAuth2AuthorizationServerTokenService tokenService) {
+    private final BearerTokenResolver bearerTokenResolver;
+
+    public ResourceServerSecurityConfiguration(
+        OAuth2AuthorizationServerTokenService tokenService,
+        BearerTokenResolver bearerTokenResolver) {
         this.tokenService = tokenService;
+        this.bearerTokenResolver = bearerTokenResolver;
     }
 
     @Override
@@ -39,16 +42,12 @@ public class ResourceServerSecurityConfiguration extends WebSecurityConfigurerAd
             .authorizeRequests().anyRequest().fullyAuthenticated();
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         http.oauth2ResourceServer()
-            .bearerTokenResolver(bearerTokenResolver())
+            .bearerTokenResolver(bearerTokenResolver)
             .opaqueToken()
             .authenticationManager(new ServerOpaqueTokenAuthenticationManager(tokenService));
-        http.requestMatcher(new BearerTokenRequestMatcher(bearerTokenResolver()));
+        http.requestMatcher(new BearerTokenRequestMatcher(bearerTokenResolver));
     }
 
-    @Bean
-    public BearerTokenResolver bearerTokenResolver() {
-        return new DefaultBearerTokenResolver();
-    }
 
     private final static class BearerTokenRequestMatcher implements RequestMatcher {
 

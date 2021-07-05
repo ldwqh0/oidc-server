@@ -4,6 +4,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -20,6 +21,7 @@ import org.xyyh.oidc.exception.TokenRequestValidationException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
+import java.net.URI;
 import java.util.*;
 
 import static org.xyyh.oidc.core.PkceValidator.CODE_CHALLENGE_METHOD_PLAIN;
@@ -65,13 +67,14 @@ public class TokenEndpoint {
      * @param redirectUri   重定向uri
      * @param requestParams 请求参数
      * @param httpRequest   http请求信息
+     * @return
      * @throws TokenRequestValidationException 如果校验失败，抛出该异常
      * @throws JOSEException                   生成 id-token错误时，引发该异常
      * @see <a href="https://tools.ietf.org/html/rfc6749#section-4.1">https://tools.ietf.org/html/rfc6749#section-4.1</a>
      */
     @PostMapping(params = {"code", "grant_type=authorization_code"})
     @ResponseBody
-    public Map<String, Object> postAccessToken(
+    public ResponseEntity<?> postAccessToken(
         @AuthenticationPrincipal ClientDetails client,
         @RequestParam("code") String code,
         @RequestParam("redirect_uri") String redirectUri,
@@ -90,8 +93,10 @@ public class TokenEndpoint {
                 && StringUtils.equals(redirectUri, auth.getRequest().getRedirectUri()))
             .orElseThrow(() -> new TokenRequestValidationException("invalid_grant"));
         OidcAuthorizationRequest storedRequest = authentication.getRequest();
-        // 根据请求进行pkce校验
-        validPkce(storedRequest.getParameters(), requestParams);
+        // 根据请求进行pkce校验,如果是公共客户端，一定要进行pkce校验
+        if (ClientDetails.ClientType.CLIENT_PUBLIC.equals(client.getType())) {
+            validPkce(storedRequest.getParameters(), requestParams);
+        }
         // 签发token
         OAuth2ServerAccessToken accessToken = tokenService.createAccessToken(authentication);
         Map<String, Object> response = accessTokenConverter.toAccessTokenResponse(accessToken);
@@ -102,7 +107,16 @@ public class TokenEndpoint {
             String token = idTokenGenerator.generate(issuer, (UserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwkSet.getKeyByKeyId("default-sign"));
             response.put("id_token", token);
         }
-        return response;
+        // 构建跨域信息，仅仅允许来自redirect的跨域请求
+        URI uri = URI.create(storedRequest.getRedirectUri());
+        StringBuilder origin = new StringBuilder();
+        origin.append(uri.getScheme()).append("://");
+        origin.append(uri.getHost());
+        int port = uri.getPort();
+        if (port > 0) {
+            origin.append(":").append(port);
+        }
+        return ResponseEntity.ok().header("Access-Control-Allow-Origin", origin.toString()).body(response);
     }
 
 

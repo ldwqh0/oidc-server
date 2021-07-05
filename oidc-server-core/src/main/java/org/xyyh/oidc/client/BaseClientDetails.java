@@ -1,6 +1,7 @@
 package org.xyyh.oidc.client;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
 import java.util.Collection;
@@ -24,22 +25,22 @@ public class BaseClientDetails implements ClientDetails {
     private final Integer accessTokenValiditySeconds;
 
     private final Integer refreshTokenValiditySeconds;
-    private final boolean requirePkce;
     private final boolean accountExpired;
     private final boolean accountLocked;
     private final boolean credentialsExpired;
     private final boolean enabled;
+    private final ClientType type;
 
     public BaseClientDetails(
         String clientId,
         String clientSecret,
+        ClientType type,
         boolean autoApproval,
         Set<String> scope,
         Set<String> registeredRedirectUris,
         Set<String> authorizedGrantTypes,
         Integer accessTokenValiditySeconds,
         Integer refreshTokenValiditySeconds,
-        boolean requirePkce,
         boolean accountExpired,
         boolean accountLocked,
         boolean credentialsExpired,
@@ -52,8 +53,7 @@ public class BaseClientDetails implements ClientDetails {
         this.authorizedGrantTypes = transform(authorizedGrantTypes, AuthorizationGrantType::new);
         this.accessTokenValiditySeconds = accessTokenValiditySeconds;
         this.refreshTokenValiditySeconds = refreshTokenValiditySeconds;
-        this.requirePkce = requirePkce;
-
+        this.type = type;
         this.accountExpired = accountExpired;
         this.accountLocked = accountLocked;
         this.credentialsExpired = credentialsExpired;
@@ -95,14 +95,9 @@ public class BaseClientDetails implements ClientDetails {
         return autoApproval;
     }
 
-    public boolean isRequirePkce() {
-        return requirePkce;
-    }
-
     @Override
-    public String getType() {
-        // TODO　客户端类型
-        return "null";
+    public ClientType getType() {
+        return this.type;
     }
 
     @Override
@@ -155,8 +150,8 @@ public class BaseClientDetails implements ClientDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // TODO 这里待处理，需要对client进行分权
-        return Collections.emptyList();
+        // 根据不同的类型，确定不同client权限
+        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + type));
     }
 
     @Override

@@ -7,7 +7,10 @@ import org.xyyh.oidc.collect.CollectionUtils;
 import org.xyyh.oidc.core.OAuth2AuthorizationRequestValidator;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationResponseType;
-import org.xyyh.oidc.exception.*;
+import org.xyyh.oidc.exception.InvalidCodeChallengeException;
+import org.xyyh.oidc.exception.InvalidRequestParameterException;
+import org.xyyh.oidc.exception.InvalidRequestScopeException;
+import org.xyyh.oidc.exception.UnsupportedResponseTypeException;
 
 import java.util.Set;
 
@@ -79,7 +82,7 @@ public class DefaultOAuth2AuthorizationRequestValidator implements OAuth2Authori
      * @param request 授权请求
      */
     private void validPkceRequest(OidcAuthorizationRequest request, ClientDetails client) throws InvalidCodeChallengeException {
-        if (client.isRequirePkce()) {
+        if (ClientDetails.ClientType.CLIENT_PUBLIC.equals(client.getType())) {
             String codeChallenge = request.getParameters().get("code_challenge");
             if (StringUtils.isBlank(codeChallenge)) {
                 throw new InvalidCodeChallengeException(request);
