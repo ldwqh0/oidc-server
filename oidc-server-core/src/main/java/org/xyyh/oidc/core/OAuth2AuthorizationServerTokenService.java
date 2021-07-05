@@ -12,6 +12,8 @@ public interface OAuth2AuthorizationServerTokenService {
     // 根据access
     Optional<OidcAuthentication> loadAuthentication(String accessToken);
 
+    Optional<OidcAuthentication> loadAuthenticationByRefreshToken(String refreshToken);
+
     Optional<OAuth2ServerAccessToken> readAccessToken(String accessToken);
 
     /**

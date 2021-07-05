@@ -16,7 +16,7 @@ public class BaseClientDetails implements ClientDetails {
     private static final long serialVersionUID = -7386163121370242465L;
 
     private final String clientId;
-    private String clientSecret;
+    private final String clientSecret;
     private final boolean autoApproval;
     private final Set<String> scopes;
     private final Set<String> registeredRedirectUris;

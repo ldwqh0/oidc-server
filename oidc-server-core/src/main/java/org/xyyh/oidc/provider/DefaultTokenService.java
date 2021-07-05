@@ -113,7 +113,7 @@ public class DefaultTokenService implements OAuth2AuthorizationServerTokenServic
         return accessTokenStore.getAccessToken(accessToken);
     }
 
-    private Optional<OidcAuthentication> loadAuthenticationByRefreshToken(String refreshToken) {
+    public Optional<OidcAuthentication> loadAuthenticationByRefreshToken(String refreshToken) {
         return accessTokenStore
             .getRefreshToken(refreshToken)
             .map(OAuth2ServerRefreshToken::getTokenValue)

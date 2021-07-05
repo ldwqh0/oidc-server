@@ -1,7 +1,7 @@
 package org.xyyh.oidc.endpoint.request;
 
 /**
- * @see <a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-02#section-3.1.1">Response Type</a>
+ * @see <a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-02#section-3.1.1">Response ClientType</a>
  */
 public enum OidcAuthorizationResponseType {
 
