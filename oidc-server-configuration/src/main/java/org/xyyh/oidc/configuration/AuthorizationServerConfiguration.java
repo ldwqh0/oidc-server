@@ -50,16 +50,15 @@ public class AuthorizationServerConfiguration {
                                        PkceValidator pkceValidator,
                                        OAuth2AuthorizationServerTokenService tokenService,
                                        AccessTokenConverter accessTokenConverter,
-                                       IdTokenGenerator idTokenGenerator,
-                                       ClientDetailsService clientDetailsService) throws JOSEException {
+                                       IdTokenGenerator idTokenGenerator) throws JOSEException {
         return new TokenEndpoint(
             authorizationCodeService,
             tokenService,
             accessTokenConverter,
             pkceValidator,
             idTokenGenerator,
-            jwkSet(),
-            clientDetailsService);
+            jwkSet()
+        );
     }
 
     @Bean

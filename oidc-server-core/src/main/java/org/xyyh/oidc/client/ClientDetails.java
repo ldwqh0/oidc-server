@@ -1,5 +1,6 @@
 package org.xyyh.oidc.client;
 
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
@@ -13,11 +14,23 @@ import java.util.Set;
 public interface ClientDetails extends UserDetails, Serializable {
 
     enum ClientType {
+        /**
+         * 公共连接，这种连接客户端没有密码
+         */
         CLIENT_PUBLIC,
+        /**
+         * 有密码的连接程序，受保护的连接程序
+         */
         CLIENT_CONFIDENTIAL,
+        /**
+         * 资源服务器
+         */
         CLIENT_RESOURCE
     }
 
+    /**
+     * 是否自动授权
+     */
     boolean isAutoApproval();
 
     /**
@@ -42,6 +55,7 @@ public interface ClientDetails extends UserDetails, Serializable {
     /**
      * 应用的密钥
      */
+    @Nullable
     String getClientSecret();
 
     /**
