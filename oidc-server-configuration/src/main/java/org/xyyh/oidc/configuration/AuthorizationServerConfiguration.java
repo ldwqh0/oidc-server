@@ -1,6 +1,5 @@
 package org.xyyh.oidc.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
@@ -41,7 +40,7 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
-    public ServerDiscoveryEndpoint discoveryEndpoint(ObjectMapper objectMapper) {
+    public ServerDiscoveryEndpoint discoveryEndpoint() {
         return new ServerDiscoveryEndpoint();
     }
 
@@ -67,8 +66,8 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
-    public TokenIntrospectionEndpoint tokenIntrospectionEndpoint(OAuth2TokenIntrospectionService tokenIntrospectionService) {
-        return new TokenIntrospectionEndpoint(tokenIntrospectionService);
+    public TokenIntrospectEndpoint tokenIntrospectionEndpoint(OAuth2TokenIntrospectService tokenIntrospectionService) {
+        return new TokenIntrospectEndpoint(tokenIntrospectionService);
     }
 
     @Bean
@@ -155,9 +154,9 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(OAuth2TokenIntrospectionService.class)
-    public OAuth2TokenIntrospectionService tokenIntrospectionService(OAuth2AccessTokenStore tokenStore, AccessTokenConverter accessTokenConverter) {
-        return new DefaultOAuth2TokenIntrospectionService(tokenStore, accessTokenConverter);
+    @ConditionalOnMissingBean(OAuth2TokenIntrospectService.class)
+    public OAuth2TokenIntrospectService tokenIntrospectionService(OAuth2AccessTokenStore tokenStore, AccessTokenConverter accessTokenConverter) {
+        return new DefaultOAuth2TokenIntrospectService(tokenStore, accessTokenConverter);
     }
 
     @Bean

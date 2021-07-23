@@ -4,7 +4,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.xyyh.oidc.core.OAuth2TokenIntrospectionService;
+import org.xyyh.oidc.core.OAuth2TokenIntrospectService;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,15 +18,17 @@ import java.util.Map;
  * @author LiDong
  * @see <a href=
  * "https://tools.ietf.org/html/rfc7662">https://tools.ietf.org/html/rfc7662</a>
+ * <p>
+ * introspection
  */
-@RequestMapping("/oauth2/token/introspection")
-public class TokenIntrospectionEndpoint {
+@RequestMapping("/oauth2/token/introspect")
+public class TokenIntrospectEndpoint {
 
-    private final OAuth2TokenIntrospectionService tokenIntrospectionService;
+    private final OAuth2TokenIntrospectService tokenIntrospectionService;
 
     private final Map<String, Object> notExistResponse;
 
-    public TokenIntrospectionEndpoint(OAuth2TokenIntrospectionService tokenIntrospectionService) {
+    public TokenIntrospectEndpoint(OAuth2TokenIntrospectService tokenIntrospectionService) {
         this.tokenIntrospectionService = tokenIntrospectionService;
         Map<String, Object> notExist = new HashMap<>();
         notExist.put("active", Boolean.FALSE);
@@ -53,9 +55,9 @@ public class TokenIntrospectionEndpoint {
         @RequestParam(value = "token_type_hint", required = false, defaultValue = "access_token") String tokenTypeHint) {
         switch (tokenTypeHint) {
             case "access_token":
-                return tokenIntrospectionService.inspectAccessToken(token).orElse(notExistResponse);
+                return tokenIntrospectionService.introspectAccessToken(token).orElse(notExistResponse);
             case "refresh_token":
-                return tokenIntrospectionService.inspectRefreshToken(token).orElse(notExistResponse);
+                return tokenIntrospectionService.introspectRefreshToken(token).orElse(notExistResponse);
             default:
         }
         // TODO 这里待处理,不正确的参数应该响应为400

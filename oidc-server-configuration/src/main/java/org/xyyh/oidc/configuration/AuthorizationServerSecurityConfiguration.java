@@ -41,7 +41,7 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
             // 发现节点不做验证
             .antMatchers("/oauth2/certs", "/oauth2/.well-known/openid-configuration").permitAll()
             // 资源服务器可以访问token introspection节点
-            .antMatchers("/oauth2/token/introspection").hasAnyAuthority("ROLE_" + CLIENT_RESOURCE)
+            .antMatchers("/oauth2/token/introspect").hasAnyAuthority("ROLE_" + CLIENT_RESOURCE)
             // client可以访问token节点
             .antMatchers("/oauth2/token").hasAnyAuthority("ROLE_" + CLIENT_PUBLIC, "ROLE_" + CLIENT_CONFIDENTIAL)
             .anyRequest().fullyAuthenticated();
