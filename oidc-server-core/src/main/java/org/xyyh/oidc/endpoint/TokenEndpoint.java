@@ -1,6 +1,7 @@
 package org.xyyh.oidc.endpoint;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -45,7 +46,9 @@ public class TokenEndpoint {
 
     private final IdTokenGenerator idTokenGenerator;
 
-    private final JWKSet jwkSet;
+//    private final JWKSet jwkSet;
+
+    private final JWK jwk;
 
     public TokenEndpoint(OAuth2AuthorizationCodeStore authorizationCodeService,
                          OAuth2AuthorizationServerTokenService tokenService,
@@ -58,7 +61,8 @@ public class TokenEndpoint {
         this.accessTokenConverter = accessTokenConverter;
         this.pkceValidator = pkceValidator;
         this.idTokenGenerator = idTokenGenerator;
-        this.jwkSet = jwkSet;
+        this.jwk = jwkSet.getKeys().get(0);
+//        this.jwkSet = jwkSet;
     }
 
     /**
@@ -104,7 +108,7 @@ public class TokenEndpoint {
             // TODO 这里其实有待商榷
             String scheme = httpRequest.getScheme();
             String issuer = StringUtils.join(scheme, "://", host, "/oauth2");
-            String token = idTokenGenerator.generate(issuer, (UserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwkSet.getKeyByKeyId("default-sign"));
+            String token = idTokenGenerator.generate(issuer, (UserDetails) Objects.requireNonNull(authentication.getUser()).getPrincipal(), accessToken, storedRequest, jwk);
             response.put("id_token", token);
         }
         // 构建跨域信息，仅仅允许来自redirect的跨域请求

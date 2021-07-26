@@ -5,11 +5,15 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.util.ResourceUtils;
 import org.xyyh.oidc.client.ClientDetailsService;
 import org.xyyh.oidc.client.InMemoryClientDetailsService;
 import org.xyyh.oidc.core.*;
@@ -17,6 +21,18 @@ import org.xyyh.oidc.endpoint.*;
 import org.xyyh.oidc.endpoint.converter.AccessTokenConverter;
 import org.xyyh.oidc.endpoint.converter.DefaultAccessTokenConverter;
 import org.xyyh.oidc.provider.*;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Configuration
 public class AuthorizationServerConfiguration {
@@ -49,20 +65,21 @@ public class AuthorizationServerConfiguration {
                                        PkceValidator pkceValidator,
                                        OAuth2AuthorizationServerTokenService tokenService,
                                        AccessTokenConverter accessTokenConverter,
-                                       IdTokenGenerator idTokenGenerator) throws JOSEException {
+                                       IdTokenGenerator idTokenGenerator,
+                                       JWKSet jwkSet) {
         return new TokenEndpoint(
             authorizationCodeService,
             tokenService,
             accessTokenConverter,
             pkceValidator,
             idTokenGenerator,
-            jwkSet()
+            jwkSet
         );
     }
 
     @Bean
-    public JWKSetEndpoint keySetEndpoint() throws JOSEException {
-        return new JWKSetEndpoint(jwkSet());
+    public JWKSetEndpoint keySetEndpoint(JWKSet jwkSet) {
+        return new JWKSetEndpoint(jwkSet);
     }
 
     @Bean
@@ -81,6 +98,34 @@ public class AuthorizationServerConfiguration {
         return new UserdetailsToOidcUserInfoService();
     }
 
+
+    @Bean
+    @ConditionalOnMissingBean(JWKSet.class)
+    @ConditionalOnProperty("xyyh.oidc.key-store")
+    public JWKSet loadJwkSet(OidcServerProperties serverProperties) throws KeyStoreException, NoSuchProviderException, JOSEException, IOException, CertificateException, NoSuchAlgorithmException {
+        String path = serverProperties.getKeyStore();
+        String provider = serverProperties.getKeyStoreProvider();
+        String type = defaultIfBlank(serverProperties.getKeyStoreType(), "JKS");
+        char[] keyStorePasswordChars = defaultIfEmpty(serverProperties.getKeyStorePassword(), "").toCharArray();
+        char[] keyPasswordChars = defaultIfEmpty(serverProperties.getKeyPassword(), "").toCharArray();
+        // 初始化keystore
+        KeyStore keyStore = StringUtils.isBlank(provider) ? KeyStore.getInstance(type) : KeyStore.getInstance(type, provider);
+        URL url = ResourceUtils.getURL(path);
+        try (InputStream stream = url.openStream()) {
+            keyStore.load(stream, keyStorePasswordChars);
+        }
+        // 确定证书的别名
+        String alias = StringUtils.getIfBlank(serverProperties.getKeyAlias(), () -> {
+            try {
+                return keyStore.aliases().nextElement();
+            } catch (KeyStoreException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        RSAKey key = new RSAKey.Builder(RSAKey.load(keyStore, alias, keyPasswordChars)).keyUse(KeyUse.SIGNATURE).build();
+        return new JWKSet(key);
+    }
+
     /**
      *
      */
@@ -88,11 +133,18 @@ public class AuthorizationServerConfiguration {
     @ConditionalOnMissingBean(JWKSet.class)
     public JWKSet jwkSet() throws JOSEException {
         RSAKey rsaKey = new RSAKeyGenerator(2048)
-            .keyID("default-sign")
+            .keyID("generated-sign")
             .keyUse(KeyUse.SIGNATURE)
             .generate();
         return new JWKSet(rsaKey);
     }
+
+    @Bean
+    @ConfigurationProperties(prefix = "xyyh.oidc")
+    public OidcServerProperties keyStoreProperties() {
+        return new OidcServerProperties();
+    }
+
 
     /**
      * 保存Access Token

@@ -81,7 +81,6 @@ public class DefaultIdTokenGenerator implements IdTokenGenerator {
         if (scope.contains(OidcScopes.PHONE)) {
             copyClaims(claimsBuilder, claims, PHONE_NUMBER, PHONE_NUMBER_VERIFIED);
         }
-        JWTClaimsSet claimsSet = claimsBuilder.build();
         SignedJWT jwt = new SignedJWT(header, claimsBuilder.build());
         try {
             JWSSigner signer = new RSASSASigner(jwk.toRSAKey());

@@ -1,0 +1,9 @@
+{
+  "properties": [
+    {
+      "name": "xyyh.oidc",
+      "type": "org.xyyh.oidc.configuration.OidcServerProperties",
+      "sourceType": "org.xyyh.oidc.configuration.OidcServerProperties"
+    }
+  ]
+}

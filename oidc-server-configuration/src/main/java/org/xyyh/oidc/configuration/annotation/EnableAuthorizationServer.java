@@ -12,8 +12,8 @@ import java.lang.annotation.*;
 @Documented
 @Import({
     AuthorizationServerConfiguration.class,
+    ResourceServerSecurityConfiguration.class,
     AuthorizationServerSecurityConfiguration.class,
-    ResourceServerSecurityConfiguration.class
 })
 public @interface EnableAuthorizationServer {
 
