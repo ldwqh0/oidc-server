@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.xyyh.oidc.client.ClientDetails;
 
-@RestController
 @RequestMapping("revoke")
 public class RevokeEndpoint {
     /**

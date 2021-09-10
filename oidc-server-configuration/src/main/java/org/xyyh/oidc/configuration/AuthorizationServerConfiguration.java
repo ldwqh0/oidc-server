@@ -93,6 +93,12 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(ErrorEndpoint.class)
+    public ErrorEndpoint defaultErrorEndpoint() {
+        return new DefaultErrorEndpoint();
+    }
+
+    @Bean
     @ConditionalOnMissingBean(OidcUserInfoService.class)
     public OidcUserInfoService userClaimsService() {
         return new UserdetailsToOidcUserInfoService();

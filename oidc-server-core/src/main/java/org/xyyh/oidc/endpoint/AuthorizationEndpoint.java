@@ -11,6 +11,8 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.support.SessionStatus;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.RedirectView;
@@ -286,22 +288,10 @@ public class AuthorizationEndpoint {
      *
      * @param ex 要处理的异常
      */
-    @ExceptionHandler({UnauthorizedClientException.class})
-    public ModelAndView handleError(UnauthorizedClientException ex) {
-//        sessionStatus.setComplete();
-//        ex.getRequest()
-        return new ModelAndView("/oauth2/error");
-    }
-
-    /**
-     * 处理 InvalidRedirectUriException 异常，这个异常不能跳转
-     *
-     * @param ex 要处理的异常
-     */
-    @ExceptionHandler(InvalidRedirectUriException.class)
-    public ModelAndView handleError(InvalidRedirectUriException ex) {
-//        sessionStatus.setComplete();
-        return new ModelAndView("/oauth2/error");
+    @ExceptionHandler({UnauthorizedClientException.class, InvalidRedirectUriException.class})
+    public String handleError(Exception ex, WebRequest request) {
+        request.setAttribute("error", ex, RequestAttributes.SCOPE_REQUEST);
+        return "forward:/oauth2/error";
     }
 
 
