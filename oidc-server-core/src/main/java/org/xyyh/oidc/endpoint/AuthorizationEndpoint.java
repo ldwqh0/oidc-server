@@ -290,7 +290,7 @@ public class AuthorizationEndpoint {
     public ModelAndView handleError(UnauthorizedClientException ex) {
 //        sessionStatus.setComplete();
 //        ex.getRequest()
-        return new ModelAndView("");
+        return new ModelAndView("/oauth2/error");
     }
 
     /**
@@ -301,7 +301,7 @@ public class AuthorizationEndpoint {
     @ExceptionHandler(InvalidRedirectUriException.class)
     public ModelAndView handleError(InvalidRedirectUriException ex) {
 //        sessionStatus.setComplete();
-        return new ModelAndView("");
+        return new ModelAndView("/oauth2/error");
     }
 
 

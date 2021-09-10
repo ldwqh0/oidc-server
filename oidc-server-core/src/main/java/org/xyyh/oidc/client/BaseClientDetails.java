@@ -1,7 +1,6 @@
 package org.xyyh.oidc.client;
 
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
 import java.util.Collection;
@@ -29,6 +28,8 @@ public class BaseClientDetails implements ClientDetails {
     private final boolean accountLocked;
     private final boolean credentialsExpired;
     private final boolean enabled;
+    private final Collection<? extends GrantedAuthority> authorities;
+
     private final ClientType type;
 
     public BaseClientDetails(
@@ -39,6 +40,7 @@ public class BaseClientDetails implements ClientDetails {
         Set<String> scope,
         Set<String> registeredRedirectUris,
         Set<String> authorizedGrantTypes,
+        Collection<? extends GrantedAuthority> authorities,
         Integer accessTokenValiditySeconds,
         Integer refreshTokenValiditySeconds,
         boolean accountExpired,
@@ -51,6 +53,7 @@ public class BaseClientDetails implements ClientDetails {
         this.scopes = hashSet(scope);
         this.registeredRedirectUris = hashSet(registeredRedirectUris);
         this.authorizedGrantTypes = transform(authorizedGrantTypes, AuthorizationGrantType::new);
+        this.authorities = Collections.unmodifiableCollection(authorities);
         this.accessTokenValiditySeconds = accessTokenValiditySeconds;
         this.refreshTokenValiditySeconds = refreshTokenValiditySeconds;
         this.type = type;
@@ -150,8 +153,7 @@ public class BaseClientDetails implements ClientDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 根据不同的类型，确定不同client权限
-        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + type));
+        return this.authorities;
     }
 
     @Override

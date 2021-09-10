@@ -2,6 +2,7 @@ package org.xyyh.oidc.configuration;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,7 +30,7 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
         http.requestMatchers().antMatchers(
             "/oauth2/token",
             "/oauth2/certs",
-            "/oauth2/token/introspection",
+            "/oauth2/token/introspect",
             "/oauth2/.well-known/openid-configuration");
         http.anonymous();
         // 根据rfc6749,如果客户端验证未通过，应用返回401和WWW-Authenticate header
@@ -39,9 +40,9 @@ public class AuthorizationServerSecurityConfiguration extends WebSecurityConfigu
             .logout().disable();
         http.authorizeRequests()
             // 发现节点不做验证
-            .antMatchers("/oauth2/certs", "/oauth2/.well-known/openid-configuration").permitAll()
+            .antMatchers(HttpMethod.GET, "/oauth2/certs", "/oauth2/.well-known/openid-configuration").permitAll()
             // 资源服务器可以访问token introspection节点
-            .antMatchers("/oauth2/token/introspect").hasAnyAuthority("ROLE_" + CLIENT_RESOURCE)
+            .antMatchers(HttpMethod.POST, "/oauth2/token/introspect").hasAnyAuthority("ROLE_" + CLIENT_RESOURCE)
             // client可以访问token节点
             .antMatchers("/oauth2/token").hasAnyAuthority("ROLE_" + CLIENT_PUBLIC, "ROLE_" + CLIENT_CONFIDENTIAL)
             .anyRequest().fullyAuthenticated();
