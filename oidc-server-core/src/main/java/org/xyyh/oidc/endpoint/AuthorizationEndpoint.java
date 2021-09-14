@@ -47,7 +47,7 @@ public class AuthorizationEndpoint {
 
     private final OAuth2AuthorizationCodeStore authorizationCodeStorageService;
 
-    private String confirmAccessView = "oauth/confirm_access";
+    private String confirmAccessView = "oauth2/confirm_access";
 
     public AuthorizationEndpoint(ClientDetailsService clientDetailsService,
                                  OAuth2AuthorizationRequestValidator requestValidator,
