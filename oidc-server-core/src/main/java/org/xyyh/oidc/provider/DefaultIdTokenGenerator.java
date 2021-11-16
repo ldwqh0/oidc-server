@@ -13,7 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.xyyh.oidc.core.IdTokenGenerator;
 import org.xyyh.oidc.core.OAuth2ServerAccessToken;
-import org.xyyh.oidc.core.OidcUserInfoService;
+import org.xyyh.oidc.core.OidcUserClaimsService;
 import org.xyyh.oidc.endpoint.request.OidcAuthorizationRequest;
 
 import java.util.Date;
@@ -33,9 +33,9 @@ import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.*
 public class DefaultIdTokenGenerator implements IdTokenGenerator {
     private final Logger log = LoggerFactory.getLogger(DefaultIdTokenGenerator.class);
 
-    private final OidcUserInfoService userInfoService;
+    private final OidcUserClaimsService userInfoService;
 
-    public DefaultIdTokenGenerator(OidcUserInfoService userInfoService) {
+    public DefaultIdTokenGenerator(OidcUserClaimsService userInfoService) {
         this.userInfoService = userInfoService;
     }
 
