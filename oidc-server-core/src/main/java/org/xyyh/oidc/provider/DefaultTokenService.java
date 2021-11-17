@@ -1,5 +1,6 @@
 package org.xyyh.oidc.provider;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.core.Authentication;
@@ -52,14 +53,14 @@ public class DefaultTokenService implements OAuth2AuthorizationServerTokenServic
     @Override
     public OAuth2ServerAccessToken createAccessToken(final OidcAuthentication authentication) {
         OAuth2ServerAccessToken accessToken = accessTokenStore.getAccessToken(authentication)
-            .map(existingAccessToken -> {
-                if (Instant.now().isAfter(existingAccessToken.getExpiresAt())) {
-                    accessTokenStore.delete(existingAccessToken.getTokenValue());
-                    return generateAccessToken(authentication.getClient(), authentication.getScopes());
-                } else {
-                    return existingAccessToken;
-                }
-            }).orElseGet(() -> generateAccessToken(authentication.getClient(), authentication.getScopes()));
+                .map(existingAccessToken -> {
+                    if (Instant.now().isAfter(existingAccessToken.getExpiresAt())) {
+                        accessTokenStore.delete(existingAccessToken.getTokenValue());
+                        return generateAccessToken(authentication.getClient(), authentication.getScopes());
+                    } else {
+                        return existingAccessToken;
+                    }
+                }).orElseGet(() -> generateAccessToken(authentication.getClient(), authentication.getScopes()));
         return accessTokenStore.save(accessToken, authentication);
     }
 
@@ -100,11 +101,18 @@ public class DefaultTokenService implements OAuth2AuthorizationServerTokenServic
     }
 
     @Override
+    public void revokeAccessToken(String token) {
+        if (StringUtils.isNotEmpty(token)) {
+            accessTokenStore.delete(token);
+        }
+    }
+
+    @Override
     public Optional<OidcAuthentication> loadAuthentication(String accessToken) {
         return accessTokenStore
-            .getAccessToken(accessToken)
-            .map(OAuth2ServerToken::getTokenValue)
-            .flatMap(accessTokenStore::loadAuthentication);
+                .getAccessToken(accessToken)
+                .map(OAuth2ServerToken::getTokenValue)
+                .flatMap(accessTokenStore::loadAuthentication);
     }
 
 
@@ -115,9 +123,9 @@ public class DefaultTokenService implements OAuth2AuthorizationServerTokenServic
 
     public Optional<OidcAuthentication> loadAuthenticationByRefreshToken(String refreshToken) {
         return accessTokenStore
-            .getRefreshToken(refreshToken)
-            .map(OAuth2ServerRefreshToken::getTokenValue)
-            .flatMap(accessTokenStore::loadAuthenticationByRefreshToken);
+                .getRefreshToken(refreshToken)
+                .map(OAuth2ServerRefreshToken::getTokenValue)
+                .flatMap(accessTokenStore::loadAuthenticationByRefreshToken);
     }
 
     /**

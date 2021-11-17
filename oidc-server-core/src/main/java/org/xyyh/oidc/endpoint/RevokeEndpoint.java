@@ -4,11 +4,18 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.xyyh.oidc.client.ClientDetails;
+import org.xyyh.oidc.core.OAuth2AuthorizationServerTokenService;
 
 @RequestMapping("revoke")
 public class RevokeEndpoint {
+
+    private final OAuth2AuthorizationServerTokenService tokenService;
+
+    public RevokeEndpoint(OAuth2AuthorizationServerTokenService tokenService) {
+        this.tokenService = tokenService;
+    }
+
     /**
      * revoke a token<br>
      * 废除一token,可以是access token,也可以是refresh token
@@ -27,6 +34,7 @@ public class RevokeEndpoint {
         // TODO 需要支持跨域
         // TODO 待实现
         // 可能抛出 unsupported_token_type 异常
+        tokenService.revokeAccessToken(token);
     }
 
 }

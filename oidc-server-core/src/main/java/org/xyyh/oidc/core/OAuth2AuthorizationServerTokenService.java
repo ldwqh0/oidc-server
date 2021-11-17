@@ -31,4 +31,11 @@ public interface OAuth2AuthorizationServerTokenService {
      * @return
      */
     OAuth2ServerAccessToken refreshAccessToken(String refreshToken, ClientDetails client, Collection<String> requestScopes) throws RefreshTokenValidationException, TokenRequestValidationException;
+
+    /**
+     * 使一个access token失效
+     *
+     * @param token
+     */
+    void revokeAccessToken(String token);
 }
