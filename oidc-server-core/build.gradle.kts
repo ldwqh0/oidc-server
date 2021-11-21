@@ -1,19 +1,20 @@
 plugins {
-    java
-}
-
-group = "org.example"
-version = "1.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
+  id("org.xzcode.oidc.java-conventions")
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-}
+  implementation("org.springframework:spring-web")
+  implementation("org.springframework:spring-webmvc")
+  implementation("org.springframework.security:spring-security-oauth2-core")
+  implementation("org.springframework.security:spring-security-oauth2-resource-server")
+  implementation("org.springframework.security:spring-security-oauth2-jose")
+  implementation("org.apache.commons:commons-lang3")
+  implementation("com.fasterxml.jackson.core:jackson-databind")
+  implementation("jakarta.validation:jakarta.validation-api")
+  implementation("org.slf4j:slf4j-api")
+  implementation("commons-codec:commons-codec")
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+  compileOnly("jakarta.servlet:jakarta.servlet-api")
+  testImplementation("org.junit.jupiter:junit-jupiter-api")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
