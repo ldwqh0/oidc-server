@@ -11,6 +11,5 @@ dependencies {
   implementation("org.springframework.security:spring-security-oauth2-jose")
   implementation("org.apache.commons:commons-lang3")
   implementation(project(":oidc-server-core"))
-
   compileOnly("jakarta.servlet:jakarta.servlet-api")
 }
