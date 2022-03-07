@@ -1,0 +1,45 @@
+package org.xzcode.oidc.provider;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.xzcode.oidc.core.ApprovalResult;
+import org.xzcode.oidc.core.UserApprovalHandler;
+import org.xzcode.oidc.endpoint.request.OidcAuthorizationRequest;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 默认的授权处理器
+ *
+ * @author LiDong
+ */
+public class DefaultUserApprovalHandler implements UserApprovalHandler {
+
+
+    @Override
+    public ApprovalResult preCheck(OidcAuthorizationRequest request, UserDetails user) {
+        // 返回一个默认结果，默认结果为未授权
+        return ApprovalResult.empty();
+    }
+
+    @Override
+    public ApprovalResult approval(OidcAuthorizationRequest request, UserDetails user, Map<String, String> approvalParameters) {
+        Set<String> requestScopes = request.getScopes();
+        Set<String> approvedScopes = new HashSet<>(); // 授权允许的scope
+        for (String requestScope : requestScopes) {
+            String scopePrefix = "scope.";
+            String approvalValue = approvalParameters.get(scopePrefix + requestScope);
+            if (StringUtils.equalsIgnoreCase("true", approvalValue)) {
+                approvedScopes.add(requestScope);
+            }
+        }
+        return ApprovalResult.of(approvedScopes, request.getRedirectUri());
+    }
+
+    @Override
+    public void updateAfterApproval(OidcAuthorizationRequest request, UserDetails user, ApprovalResult result) {
+
+    }
+}

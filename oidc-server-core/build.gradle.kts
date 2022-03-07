@@ -15,6 +15,7 @@ dependencies {
   implementation("commons-codec:commons-codec")
 
   compileOnly("jakarta.servlet:jakarta.servlet-api")
+  compileOnly("org.springframework:spring-tx")
   testImplementation("org.junit.jupiter:junit-jupiter-api")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }

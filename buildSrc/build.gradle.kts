@@ -2,10 +2,8 @@ plugins {
   `kotlin-dsl`
 }
 repositories {
-  maven {
-    url = uri("https://plugins.gradle.org/m2/")
-  }
-  mavenLocal()
+  maven("https://maven.aliyun.com/repository/gradle-plugin")
+  maven("https://plugins.gradle.org/m2/")
   mavenCentral()
 }
 

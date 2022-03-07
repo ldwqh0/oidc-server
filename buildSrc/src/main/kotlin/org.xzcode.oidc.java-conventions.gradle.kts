@@ -16,7 +16,7 @@ java.targetCompatibility = JavaVersion.VERSION_1_8
 
 dependencyManagement {
   imports {
-    mavenBom("org.springframework.boot:spring-boot-dependencies:2.5.3")
+    mavenBom("org.springframework.boot:spring-boot-dependencies:2.6.3")
   }
 }
 
@@ -47,7 +47,16 @@ publishing {
         password = "lidong"
       }
     }
-    mavenLocal()
+    maven {
+      val releasesRepoUrl = "https://packages.aliyun.com/maven/repository/2124183-release-zS40pt"
+      val snapshotsRepoUrl = "https://packages.aliyun.com/maven/repository/2124183-snapshot-jg10er"
+      url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
+      isAllowInsecureProtocol = true
+      credentials {
+        username = "5f213c551d62073ceeb332b2"
+        password = "NC=d3W)28)]W"
+      }
+    }
   }
 }
 
