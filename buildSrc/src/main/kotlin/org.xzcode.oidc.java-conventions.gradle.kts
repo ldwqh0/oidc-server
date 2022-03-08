@@ -38,16 +38,6 @@ publishing {
   }
   repositories {
     maven {
-      val releasesRepoUrl = "http://demo.yzhxh.com:8081/nexus/repository/maven-releases/"
-      val snapshotsRepoUrl = "http://demo.yzhxh.com:8081/nexus/repository/maven-snapshots/"
-      url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
-      isAllowInsecureProtocol = true
-      credentials {
-        username = "lidong"
-        password = "lidong"
-      }
-    }
-    maven {
       val releasesRepoUrl = "https://packages.aliyun.com/maven/repository/2124183-release-zS40pt"
       val snapshotsRepoUrl = "https://packages.aliyun.com/maven/repository/2124183-snapshot-jg10er"
       url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
